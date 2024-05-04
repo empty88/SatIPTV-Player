@@ -5,7 +5,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SatIPTV" xmlns:wpf="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
         xmlns:vm="clr-namespace:SatIPTV.ViewModels"
-        xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
         xmlns:Behaviors="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:fa="http://schemas.fontawesome.io/icons/"
         xmlns:materialIcons="clr-namespace:Material.Icons.WPF;assembly=Material.Icons.WPF"
@@ -121,13 +120,13 @@
                         <MouseBinding Gesture="LeftClick" Command="{Binding ShowEpgCommand}" />
                     </Border.InputBindings>
                     <StackPanel Orientation="Vertical" Grid.Row="1" Margin="20,10,20,0">
-                        <StackPanel Orientation="Horizontal">
+                        <StackPanel x:Name="EpgTitle" Orientation="Horizontal">
                             <Label Content="{Binding SelectedChannel.CurrentProgram.TimeSpanString}" FontSize="17" Foreground="White" Margin="0,0,5,0" Padding="0" />
                             <Label Content="{Binding SelectedChannel.CurrentProgram.Title}" FontSize="17" FontWeight="Bold" Foreground="White" Padding="0" />
                         </StackPanel>
 
-                        <Label Content="{Binding SelectedChannel.CurrentProgram.SubTitle}" FontSize="14" Foreground="White" Padding="0" />
-                        <TextBlock x:Name="EpgDescriptionBlock" Text="{Binding SelectedChannel.CurrentProgram.Description}" FontSize="14" Foreground="White" Padding="0" TextWrapping="Wrap" SizeChanged="EpgDescriptionBlock_SizeChanged" />
+                        <Label x:Name="EpgSubTitle" Content="{Binding SelectedChannel.CurrentProgram.SubTitle}" FontSize="14" Foreground="White" Padding="0" />
+                        <TextBlock x:Name="EpgDescriptionBlock" Text="{Binding SelectedChannel.CurrentProgram.Description}" FontSize="14" Foreground="White" Padding="0" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
 

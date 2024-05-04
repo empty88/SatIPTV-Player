@@ -56,14 +56,23 @@ Namespace ViewModels.Models
             Dim removeStrings As String() = {" ", ".", "-", "_", "ä", "Ä", "ö", "Ö", "ü", "Ü", "ß"}
             Try
                 Me.Logo = New BitmapImage(New Uri(String.Format("pack://application:,,,/picons/{0}.png", displayName _
-                                                                                                                    .Replace("+", "plus") _
+                .Replace("+", "plus") _
                                                                                                                     .ReplaceAny(removeStrings, String.Empty) _
                                                                                                                     .ToLower)))
             Catch ex As Exception
             End Try
+            Dim epg As List(Of EpgInfo)
+            Task.Run(Sub()
+                         epg = NetworkHelper.GetAllEpgFromTvHeadend(displayName)
+                     End Sub).ContinueWith(Sub()
+                                               Application.Current.Dispatcher.Invoke(Sub()
+                                                                                         If My.Settings.UseTvHeadend Then
+                                                                                             EpgInfos.AddRange(epg.Select(Function(x) New EpgInfoViewModel(x)))
+                                                                                             CurrentProgram = epg.FirstOrDefault()
+                                                                                         End If
+                                                                                     End Sub)
 
-            If My.Settings.UseTvHeadend Then EpgInfos.AddRange(NetworkHelper.GetAllEpgFromTvHeadend(displayName).Select(Function(x) New EpgInfoViewModel(x)))
-
+                                           End Sub)
         End Sub
         Public Sub New(displayName As String, streamUrl As String, currentProgram As EpgInfo)
             Me.New(displayName, streamUrl)

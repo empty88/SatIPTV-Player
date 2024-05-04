@@ -31,8 +31,8 @@ Namespace ViewModels
                      End Sub)
         End Sub
 
-        Private options As String() = {}
-        Private libVLC As New LibVLC(options)
+        Private _options As String() = {}
+        Private _libVLC As New LibVLC(_options)
         Private _nowPlaying As String
         Private _showChannelListLogos As Boolean
         Private _showOsd As Boolean
@@ -58,16 +58,6 @@ Namespace ViewModels
         Public Shared Event StaticPropertyChanged As PropertyChangedEventHandler
 
         Public Property MediaPlayer As MediaPlayer
-
-        Public Property CurrentTime As String
-            Get
-                Return _currentTime
-            End Get
-            Set(value As String)
-                _currentTime = value
-                NotifyPropertyChanged("CurrentTime")
-            End Set
-        End Property
 
         Public Property NowPlaying As String
             Get
@@ -143,11 +133,12 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 _fullscreen = value
-                If value Then
-                    For Each window As Window In System.Windows.Application.Current.Windows
-                        Try
-                            If window.DataContext Is Me Then
-                                Dim currentScreen As Screen = Screen.FromPoint(New System.Drawing.Point(window.Left, window.Top))
+
+                For Each window As Window In System.Windows.Application.Current.Windows
+                    Try
+                        If window.DataContext Is Me Then
+                            Dim currentScreen As Screen = Screen.FromPoint(New System.Drawing.Point(window.Left, window.Top))
+                            If value Then
                                 window.Top = currentScreen.WorkingArea.Top
                                 window.Left = currentScreen.WorkingArea.Left
                                 window.Width = currentScreen.Bounds.Width
@@ -156,15 +147,7 @@ Namespace ViewModels
                                 window.ResizeMode = ResizeMode.NoResize
                                 window.WindowStyle = WindowStyle.None
                                 window.WindowState = WindowState.Maximized
-                            End If
-                        Catch ex As Exception
-                        End Try
-                    Next
-                Else
-                    For Each window As Window In System.Windows.Application.Current.Windows
-                        Try
-                            If window.DataContext Is Me Then
-                                Dim currentScreen As Screen = Screen.FromPoint(New System.Drawing.Point(window.Left, window.Top))
+                            Else
                                 window.Top = currentScreen.WorkingArea.Top
                                 window.Left = currentScreen.WorkingArea.Left
                                 window.Width = currentScreen.Bounds.Width
@@ -172,10 +155,10 @@ Namespace ViewModels
                                 window.ResizeMode = ResizeMode.CanResize
                                 window.WindowStyle = WindowStyle.ThreeDBorderWindow
                             End If
-                        Catch ex As Exception
-                        End Try
-                    Next
-                End If
+                        End If
+                    Catch ex As Exception
+                    End Try
+                Next
                 NotifyPropertyChanged(Fullscreen)
             End Set
         End Property
@@ -186,6 +169,7 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 _showOsd = value
+                If value Then _osdTimer.Change(5000, Timeout.Infinite)
                 NotifyPropertyChanged("ShowOsd")
             End Set
         End Property
@@ -222,13 +206,12 @@ Namespace ViewModels
         Public Property VolumeSliderDoubleClickCommand As DelegateCommand
         Public Property ExportChannelListCommand As DelegateCommand
         Public Property ImportChannelListCommand As DelegateCommand
-        Public Property MakeFullscreenCommand As DelegateCommand
         Public Property OpenSettingsCommand As DelegateCommand
 
         Public Property ShowEpgCommand As DelegateCommand
 
         Public Sub New()
-            MediaPlayer = New MediaPlayer(libVLC)
+            MediaPlayer = New MediaPlayer(_libVLC)
             ChannelList = New ObservableCollection(Of ChannelViewModel)
             CurrentVolume = 100
 
@@ -241,7 +224,6 @@ Namespace ViewModels
             VolumeSliderDoubleClickCommand = New DelegateCommand(AddressOf VolumeSliderDoubleClickCommandExecute)
             ExportChannelListCommand = New DelegateCommand(AddressOf ExportChannelListCommandExecute)
             ImportChannelListCommand = New DelegateCommand(AddressOf ImportChannelListCommandExecute)
-            MakeFullscreenCommand = New DelegateCommand(AddressOf MakeFullscreenCommandExecute)
             OpenSettingsCommand = New DelegateCommand(AddressOf OpenSettingsCommandExecute)
             ShowEpgCommand = New DelegateCommand(AddressOf ShowEpgCommandExecute)
 
@@ -256,25 +238,6 @@ Namespace ViewModels
         Private Sub OpenSettingsCommandExecute()
             Dim window As New SettingsView()
             window.ShowDialog()
-        End Sub
-
-        Private Sub MakeFullscreenCommandExecute()
-            Dim secondaryScreen As Screen = Screen.AllScreens(1)
-            For Each window As Window In System.Windows.Application.Current.Windows
-                Try
-                    If window.DataContext Is Me Then
-                        window.Top = secondaryScreen.WorkingArea.Top
-                        window.Left = secondaryScreen.WorkingArea.Left
-                        window.Width = secondaryScreen.Bounds.Width
-                        window.Height = secondaryScreen.Bounds.Height
-                        window.WindowStartupLocation = WindowStartupLocation.Manual
-                        window.ResizeMode = ResizeMode.NoResize
-                        window.WindowStyle = WindowStyle.None
-                        window.WindowState = WindowState.Maximized
-                    End If
-                Catch ex As Exception
-                End Try
-            Next
         End Sub
 
         Private Sub ImportChannelListCommandExecute()
@@ -366,8 +329,8 @@ Namespace ViewModels
             For Each channel In My.Settings.ChannelList
                 Dim chArr As String() = channel.Split("""")
                 Dim currentEpg As EpgInfo
-                If My.Settings.UseTvHeadend Then currentEpg = NetworkHelper.GetCurrentEpgFromTvHeadend(chArr(1))
                 ChannelList.Add(New ChannelViewModel(chArr(1), chArr(3), currentEpg))
+                Console.WriteLine(chArr(1) & " geladen")
             Next
             '_currentProgramUpdateTimer.Change(20000, 20000)
             SelectedChannel = ChannelList.FirstOrDefault()
@@ -379,10 +342,6 @@ Namespace ViewModels
                                                   End Sub)
         End Sub
 
-        Private Sub UpdateState(sender As Object, e As MediaStateChangedEventArgs)
-
-        End Sub
-
         Private Sub EditChannelListCommandExecute()
             Dim previousSelectedChannelName As String
             If SelectedChannel IsNot Nothing Then previousSelectedChannelName = SelectedChannel.DisplayName
@@ -390,6 +349,7 @@ Namespace ViewModels
             Dim window As New EditChannelListView()
             window.DataContext = vm
             window.ShowDialog()
+
             LoadChannelList()
             Dim newChannel As ChannelViewModel = ChannelList.FirstOrDefault(Function(x) x.DisplayName.Equals(previousSelectedChannelName))
             If Not ChannelList.Count.Equals(0) AndAlso newChannel Is Nothing Then
@@ -426,7 +386,6 @@ Namespace ViewModels
                                                                                     If My.Settings.UseTvHeadend Then
                                                                                         If SelectedChannel IsNot Nothing Then SelectedChannel.CurrentProgram = epgInfo
                                                                                         ShowOsd = True
-                                                                                        _osdTimer.Change(5000, Timeout.Infinite)
                                                                                     End If
                                                                                 End If
                                                                             End Sub)
@@ -438,10 +397,10 @@ Namespace ViewModels
         Private Sub ActivateChannel(streamUrl As String)
             streamUrl = streamUrl.Replace("rtsp://", "satip://")
             If SelectedChannel.CurrentProgram IsNot Nothing Then NowPlaying = SelectedChannel.CurrentProgram.Title & " "
-
-            MediaPlayer.Play(New Media(libVLC, New Uri(streamUrl)))
+            Using media = New Media(_libVLC, New Uri(streamUrl))
+                MediaPlayer.Play(media)
+            End Using
             AddHandler MediaPlayer.Media.MetaChanged, AddressOf UpdateMeta
-            AddHandler MediaPlayer.Media.StateChanged, AddressOf UpdateState
             AddHandler MediaPlayer.VolumeChanged, AddressOf UpdateVolume
             If MediaPlayer.Volume > 100 Then MediaPlayer.Volume = 100
 
@@ -458,8 +417,11 @@ Namespace ViewModels
             ShowOsd = False
         End Sub
 
-
-
+        Public Sub Unload()
+            MediaPlayer.Stop()
+            MediaPlayer.Dispose()
+            _libVLC.Dispose()
+        End Sub
 
     End Class
 End Namespace

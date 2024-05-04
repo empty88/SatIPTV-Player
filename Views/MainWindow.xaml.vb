@@ -135,15 +135,9 @@ Namespace Views
 
         End Sub
 
-        Private Sub EpgDescriptionBlock_SizeChanged(sender As Object, e As SizeChangedEventArgs)
-            If DirectCast(sender, TextBlock).RenderSize.Height > 200 Then
-
-            End If
-        End Sub
-
         Private Sub EpgBorder_MouseEnter(sender As Object, e As Input.MouseEventArgs)
-            If EpgDescriptionBlock.RenderSize.Height > 90 Then
-                EpgBorder.Height = 120 + EpgDescriptionBlock.RenderSize.Height
+            If EpgDescriptionBlock.RenderSize.Height + EpgTitle.RenderSize.Height + EpgSubTitle.RenderSize.Height > EpgBorder.RenderSize.Height Then
+                EpgBorder.Height = EpgTitle.RenderSize.Height + EpgSubTitle.RenderSize.Height + EpgDescriptionBlock.RenderSize.Height + 40
             End If
         End Sub
 
@@ -153,6 +147,10 @@ Namespace Views
 
         Private Sub ClockTimerCallBack(state As Object)
             Application.Current.Dispatcher.Invoke(Sub() Me.CurrentTime.Header = DateTime.Now.ToString("HH:mm:ss"))
+        End Sub
+
+        Private Sub MainWindow_Unloaded(sender As Object, e As RoutedEventArgs) Handles Me.Unloaded
+            DirectCast(Me.DataContext, MainViewModel).Unload()
         End Sub
     End Class
 End Namespace
