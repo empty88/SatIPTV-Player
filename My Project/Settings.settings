@@ -13,10 +13,10 @@
       <Value Profile="(Default)">http://beispiel:9981</Value>
     </Setting>
     <Setting Name="ShowChannelListLogos" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
+      <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="ShowChannelList" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
+      <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="UseTvHeadend" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>

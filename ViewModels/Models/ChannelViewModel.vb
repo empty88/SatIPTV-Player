@@ -61,15 +61,13 @@ Namespace ViewModels.Models
                                                                                                                     .ToLower)))
             Catch ex As Exception
             End Try
-            Dim epg As List(Of EpgInfo)
+            Dim epg As New List(Of EpgInfo)
             Task.Run(Sub()
-                         epg = NetworkHelper.GetAllEpgFromTvHeadend(displayName)
+                         If My.Settings.UseTvHeadend Then epg = NetworkHelper.GetAllEpgFromTvHeadend(displayName)
                      End Sub).ContinueWith(Sub()
                                                Application.Current.Dispatcher.Invoke(Sub()
-                                                                                         If My.Settings.UseTvHeadend Then
-                                                                                             EpgInfos.AddRange(epg.Select(Function(x) New EpgInfoViewModel(x)))
-                                                                                             CurrentProgram = epg.FirstOrDefault()
-                                                                                         End If
+                                                                                         EpgInfos.AddRange(epg.Select(Function(x) New EpgInfoViewModel(x)))
+                                                                                         CurrentProgram = epg.FirstOrDefault()
                                                                                      End Sub)
 
                                            End Sub)
