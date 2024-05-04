@@ -1,0 +1,39 @@
+﻿<Window x:Class="Views.SettingsView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SatIPTV"
+        xmlns:materialIcons="clr-namespace:Material.Icons.WPF;assembly=Material.Icons.WPF"
+        mc:Ignorable="d"
+        DataContext="{StaticResource SettingsViewModel}"
+        Title="Einstellungen" Height="450" Width="400">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+
+        <Label Content="TVheadend für EPG verwenden" Grid.Row="0" Grid.Column="0" />
+        <CheckBox IsChecked="{Binding UseTvHeadend}" Grid.Row="0" Grid.Column="1" VerticalContentAlignment="Center" />
+        <Label Content="Endpoint (http://serverip:port)" Grid.Row="1" Grid.Column="0" />
+        <TextBox Text="{Binding TvHeadendServer}" Grid.Row="1" Grid.Column="1" VerticalContentAlignment="Center" />
+        <Label Content="Benutzer" Grid.Row="2" Grid.Column="0" />
+        <TextBox Text="{Binding TvHeadendUser}" Grid.Row="2" Grid.Column="1" VerticalContentAlignment="Center" />
+        <Label Content="Passwort" Grid.Row="3" Grid.Column="0" />
+        <PasswordBox x:Name="TvHeadendPassword" PasswordChanged="TvHeadendPassword_PasswordChanged" Grid.Row="3" Grid.Column="1" VerticalContentAlignment="Center" />
+
+        <StackPanel Orientation="Horizontal" Grid.Row="5" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="5">
+            <Button Content="{materialIcons:MaterialIconExt Kind=ContentSaveOutline}" Command="{Binding SaveCommand}" Margin="5"  Width="35"/>
+            <Button Content="{materialIcons:MaterialIconExt Kind=Close}" Command="{Binding CloseCommand}" Margin="5"  Width="35"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,11 @@
+﻿<Application x:Class="Application"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:SatIPTV"
+             xmlns:viewmodels="clr-namespace:SatIPTV.ViewModels"
+             StartupUri="Views/MainWindow.xaml">
+    <Application.Resources>
+        <viewmodels:MainViewModel x:Key="MainViewModel"/>
+        <viewmodels:SettingsViewModel x:Key="SettingsViewModel"/>
+    </Application.Resources>
+</Application>

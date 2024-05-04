@@ -1,0 +1,88 @@
+﻿<Window x:Class="EditChannelListView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SatIPTV"
+        xmlns:materialIcons="clr-namespace:Material.Icons.WPF;assembly=Material.Icons.WPF" xmlns:fa="http://schemas.fontawesome.io/icons/"
+        mc:Ignorable="d"
+        Title="Senderliste" Height="700" Width="1100">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </Window.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition />
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" Grid.Column="0" BorderBrush="Black" BorderThickness="1">
+        <Grid Margin="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="AUto"/>
+                </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <DataGrid ItemsSource="{Binding ChannelList}" SelectedItem="{Binding SelectedChannel}" SelectionUnit="FullRow" CanUserAddRows="false" CanUserDeleteRows="False" CanUserSortColumns="False" AutoGenerateColumns="False" >
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Anzeigename" Binding="{Binding DisplayName}" Width="160" />
+                    <DataGridTextColumn Header="Url" Binding="{Binding StreamUrl}" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <StackPanel Orientation="Vertical" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" Margin="2">
+                    <Button Content="{materialIcons:MaterialIconExt Kind=Plus}" Command="{Binding AddChannelCommand}" Margin="2" Width="35" ToolTip="Sender hinzufügen" />
+                    <Button Content="{materialIcons:MaterialIconExt Kind=Minus}" Command="{Binding RemoveChannelCommand}" Margin="2" Width="35" ToolTip="Sender entfernen" />
+                    <Button Content="{materialIcons:MaterialIconExt Kind=MenuUp}" Command="{Binding MoveChannelUpCommand}" Margin="2" Width="35" ToolTip="Sender nach oben verschieben" />
+                    <Button Content="{materialIcons:MaterialIconExt Kind=MenuDown}" Command="{Binding MoveChannelDownCommand}" Margin="2" Width="35" ToolTip="Sender nach unten verschieben" />
+                </StackPanel>
+        </Grid>
+        </Border>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto " />
+                <RowDefinition />
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" Grid.ColumnSpan="2">
+                <Label Content="Server:"  Width="70" />
+                <ComboBox ItemsSource="{Binding ServerList}" DisplayMemberPath="DisplayName" SelectedItem="{Binding SelectedServer}" Width="300" />
+                <Button Content="{materialIcons:MaterialIconExt Kind=Refresh}" Command="{Binding RefreshServerListCommand}" Width="35" Margin="5,0,0,0" />
+
+            </StackPanel>
+            
+            <DataGrid ItemsSource="{Binding ServerChannelList}" SelectedItem="{Binding SelectedServerChannel}" IsReadOnly="True"
+                      SelectionUnit="FullRow" CanUserAddRows="false" CanUserDeleteRows="False" AutoGenerateColumns="False" Grid.Row="1" Grid.ColumnSpan="3" >
+                <DataGrid.InputBindings>
+                    <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding AddChannelFromServerCommand}" CommandParameter="{Binding ServerChannelList/}" />
+                </DataGrid.InputBindings>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Anzeigename" Binding="{Binding DisplayName}" Width="180" />
+                    <DataGridTextColumn Header="Url" Binding="{Binding StreamUrl}" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Label Content="Zum Hinzufügen einen Kanal doppelklicken" Grid.Row="2" />
+            <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.ColumnSpan="2" HorizontalAlignment="Right" Margin="5">
+                <Button Content="{materialIcons:MaterialIconExt Kind=ContentSaveOutline}" Command="{Binding SaveCommand}" Margin="5"  Width="35"/>
+                <Button Content="{materialIcons:MaterialIconExt Kind=Close}" Command="{Binding CloseCommand}" Margin="5"  Width="35"/>
+            </StackPanel>
+
+            <Grid Grid.Row="0" Grid.RowSpan="2" Grid.ColumnSpan="2" Background="#64CCCCCC" Visibility="{Binding Loading, Converter={StaticResource BooleanToVisibilityConverter}}" >
+                <fa:ImageAwesome Icon="Spinner" Spin="True" SpinDuration="4" Width="50"></fa:ImageAwesome>
+            </Grid>
+        </Grid>
+
+
+    </Grid>
+</Window>
