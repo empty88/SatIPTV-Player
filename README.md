@@ -1,6 +1,6 @@
 # SatIPTV-Player
 
-![image](https://github.com/empty88/SatIPTV-Player/assets/29315283/613a9731-d5e2-4a45-8f9e-5d438836f0d2)
+![image](https://github.com/empty88/SatIPTV-Player/assets/29315283/088b2a01-ab95-4431-a0bd-e3d226747962)
 
 
 ## Features
@@ -10,13 +10,14 @@
 - Senderauswahl von Fritz!Box Cable (DVB-C) oder aus [Senderliste] (DVB-S)
 - Kanallogos ([picons])
 - EPG (Tvheadend benötigt, Programm auch ohne EPG nutzbar)
-- `EPG-Timeline noch in Arbeit`
+- EPG-Timeline
 
 Ich habe bisher keine Möglichkeit gefunden das EPG direkt aus dem Stream abzurufen. Falls jemand eine Idee hat, wie das funktioniert, bitte gerne melden!
 
 
-## EPG-Timeline (aktueller Stand)
-![image](https://github.com/empty88/SatIPTV-Player/assets/29315283/d5ef45f7-8d1b-4506-87a6-8e8a5c903a73)
+## EPG-Timeline
+![image](https://github.com/empty88/SatIPTV-Player/assets/29315283/3c036572-eb55-40e0-b64f-534871217306)
+
 
 ## Senderliste
 Die gewünschten Sender können ganz einfach zur Liste hinzugefügt werden.
