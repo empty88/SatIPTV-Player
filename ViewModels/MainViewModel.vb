@@ -177,6 +177,7 @@ Namespace ViewModels
         Public Property VolumeSliderDoubleClickCommand As DelegateCommand
         Public Property ExportChannelListCommand As DelegateCommand
         Public Property ImportChannelListCommand As DelegateCommand
+        Public Property OpenSettingsCommand As DelegateCommand
 
         Public Sub New()
             MediaPlayer = New MediaPlayer(_libVLC)
@@ -198,13 +199,26 @@ Namespace ViewModels
             VolumeSliderDoubleClickCommand = New DelegateCommand(AddressOf VolumeSliderDoubleClickCommandExecute)
             ExportChannelListCommand = New DelegateCommand(AddressOf ExportChannelListCommandExecute)
             ImportChannelListCommand = New DelegateCommand(AddressOf ImportChannelListCommandExecute)
+            OpenSettingsCommand = New DelegateCommand(AddressOf OpenSettingsCommandExecute)
 
             ShowChannelListLogos = My.Settings.ShowChannelListLogos
             ShowChannelList = My.Settings.ShowChannelList
             If ShowChannelList Then ChannelListWidth = New GridLength(My.Settings.ChannelListWidth)
         End Sub
 
+
 #Region "Commands"
+
+        Private Sub OpenSettingsCommandExecute()
+            Dim window As New SettingsView()
+            window.Owner = GetWindow()
+            window.DataContext = New SettingsViewModel()
+            If window.ShowDialog() Then
+                LoadChannelList().ContinueWith(Sub()
+                                                   CalculateEpg()
+                                               End Sub)
+            End If
+        End Sub
 
         Private Sub ImportChannelListCommandExecute()
             Dim oldSelectedChannelName As String = Nothing
@@ -249,7 +263,9 @@ Namespace ViewModels
                             My.Settings.ChannelList.Add(String.Format("""{0}"",""{1}""", channel.DisplayName, channel.StreamUrl))
                         Next
                         My.Settings.Save()
-                        LoadChannelList()
+                        LoadChannelList().ContinueWith(Sub()
+                                                           CalculateEpg()
+                                                       End Sub)
 
                     End Using
                 End Using
@@ -294,14 +310,16 @@ Namespace ViewModels
             Dim window As New EditChannelListView()
             window.DataContext = vm
             window.Owner = GetWindow()
-            window.ShowDialog()
-
-            LoadChannelList()
-            Dim newChannel As ChannelViewModel = ChannelList.FirstOrDefault(Function(x) x.DisplayName.Equals(previousSelectedChannelName))
-            If Not ChannelList.Count.Equals(0) AndAlso newChannel Is Nothing Then
-                SelectedChannel = ChannelList.First()
-            ElseIf newChannel IsNot Nothing Then
-                SelectedChannel = newChannel
+            If window.ShowDialog() Then
+                LoadChannelList().ContinueWith(Sub()
+                                                   CalculateEpg()
+                                               End Sub)
+                Dim newChannel As ChannelViewModel = ChannelList.FirstOrDefault(Function(x) x.DisplayName.Equals(previousSelectedChannelName))
+                If Not ChannelList.Count.Equals(0) AndAlso newChannel Is Nothing Then
+                    SelectedChannel = ChannelList.First()
+                ElseIf newChannel IsNot Nothing Then
+                    SelectedChannel = newChannel
+                End If
             End If
         End Sub
 
@@ -313,6 +331,7 @@ Namespace ViewModels
 #End Region
 
         Public Function CalculateEpg() As Boolean
+            EpgReady = False
             Dim earliestEpg As EpgInfoViewModel = Nothing
             Dim latestEpg As EpgInfoViewModel = Nothing
             For Each channel In ChannelList
@@ -351,7 +370,7 @@ Namespace ViewModels
             Return True
         End Function
 
-        Private Function LoadChannelList() As Task
+        Public Function LoadChannelList() As Task
             Dim channelVm As ChannelViewModel = Nothing
             Dim epgs As List(Of EpgInfo)
             SelectedChannel = Nothing
@@ -361,11 +380,11 @@ Namespace ViewModels
                                 For Each channel In My.Settings.ChannelList
                                     Dim chArr As String() = channel.Split("""")
                                     Dim currentEpg As EpgInfo
+                                    Application.Current.Dispatcher.Invoke(Sub() channelVm = New ChannelViewModel(chArr(1), chArr(3)))
 
                                     If My.Settings.UseTvHeadend Then
                                         epgs = NetworkHelper.GetAllEpgFromTvHeadend(chArr(1))
                                         Application.Current.Dispatcher.Invoke(Sub()
-                                                                                  channelVm = New ChannelViewModel(chArr(1), chArr(3))
                                                                                   channelVm.EpgInfos.AddRange(epgs.Select(Function(x) New EpgInfoViewModel(x, channelVm)))
                                                                                   channelVm.CurrentProgram = channelVm.EpgInfos.FirstOrDefault().EpgInfo
                                                                               End Sub)

@@ -30,7 +30,11 @@ Namespace ViewModels
 
         Public Sub CloseCommandExecute()
             If _closing Then Exit Sub
-            GetWindow.Close()
+            Dim window As Window = GetWindow()
+            If window IsNot Nothing Then
+                _closing = True
+                window.Close()
+            End If
             _closing = False
         End Sub
 

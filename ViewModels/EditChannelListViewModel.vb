@@ -4,6 +4,7 @@ Imports System.Collections.Specialized
 Imports System.Net
 Imports System.Net.NetworkInformation
 Imports System.Net.Sockets
+Imports System.Windows.Forms
 Imports Prism.Commands
 Imports Prism.Modularity
 Imports Rssdp
@@ -164,6 +165,7 @@ Public Class EditChannelListViewModel
         Next
 
         My.Settings.Save()
+        GetWindow().DialogResult = DialogResult.OK
         CloseWindow()
     End Sub
 

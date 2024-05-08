@@ -241,11 +241,6 @@ Namespace Views
             window.ShowDialog()
         End Sub
 
-        Private Sub MenuItemSettings_Click(sender As Object, e As RoutedEventArgs)
-            Dim window As New SettingsView()
-            window.Owner = Me
-            window.ShowDialog()
-        End Sub
 #End Region
     End Class
 End Namespace

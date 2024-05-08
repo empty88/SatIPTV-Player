@@ -90,7 +90,7 @@
                 <MenuItem x:Name="MenuItemEpg" Header="EPG umschalten" Click="MenuItemEpg_Click" InputGestureText="F2" Visibility="{Binding EpgReady, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 <MenuItem x:Name="MenuItemFullscreen" Header="Vollbild" IsCheckable="True" InputGestureText="F12"  Checked="MenuItemFullscreen_Checked" Unchecked="MenuItemFullscreen_Unchecked" />
             </MenuItem>
-            <MenuItem x:Name="MenuItemSettings" Header="Einstellungen" Click="MenuItemSettings_Click"  />
+            <MenuItem x:Name="MenuItemSettings" Header="Einstellungen" Command="{Binding OpenSettingsCommand}"  />
             <MenuItem x:Name="MenuItemInfo" Header="Info" Click="MenuItemInfo_Click"  />
             <MenuItem x:Name="CurrentTime" HorizontalAlignment="Right" Focusable="False" IsEnabled="False" />
         </Menu>

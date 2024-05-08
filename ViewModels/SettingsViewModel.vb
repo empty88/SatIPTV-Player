@@ -3,6 +3,7 @@ Imports System.Security
 Imports System.Security.Cryptography
 Imports System.Security.Cryptography.Xml
 Imports System.Text
+Imports System.Windows.Forms
 Imports Prism.Commands
 Imports SatIPTV.Helper
 
@@ -39,6 +40,7 @@ Namespace ViewModels
             My.Settings.TvHeadendPassword = EncryptionHelper.EncryptString(TvHeadendPassword)
             My.Settings.DVBSChannelListUrl = DVBSChannelListUrl
             My.Settings.Save()
+            GetWindow().DialogResult = DialogResult.OK
             CloseWindow()
         End Sub
 
