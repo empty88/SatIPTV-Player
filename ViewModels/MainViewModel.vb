@@ -420,9 +420,11 @@ Namespace ViewModels
             If SelectedChannel.CurrentProgram IsNot Nothing Then NowPlaying = SelectedChannel.CurrentProgram.Title & " "
             Using media = New Media(_libVLC, New Uri(streamUrl))
                 MediaPlayer.Play(media)
+
             End Using
             AddHandler MediaPlayer.Media.MetaChanged, AddressOf UpdateMeta
             AddHandler MediaPlayer.VolumeChanged, AddressOf UpdateVolume
+            AddHandler MediaPlayer.EncounteredError, AddressOf ErrorOccured
             If MediaPlayer.Volume > 100 Then MediaPlayer.Volume = 100
 
             Task.Run(Sub()
@@ -432,6 +434,10 @@ Namespace ViewModels
                              ShowOsd = True
                          End If
                      End Sub)
+        End Sub
+
+        Private Sub ErrorOccured(sender As Object, e As EventArgs)
+            MainViewModel.ErrorString = "Wiedergabe fehlgeschlagen"
         End Sub
 
         Private Sub OsdTimerCallback(state As Object)
