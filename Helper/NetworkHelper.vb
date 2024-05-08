@@ -115,10 +115,11 @@ Namespace Helper
                         Return ParseM3u(m3uContent)
                     End If
 
-                    Return Nothing
+                    Return New List(Of Channel)
                 End Using
             Catch ex As Exception
                 MainViewModel.ErrorString = String.Format("DVB-S Sender-Download: {0}", ex.Message)
+                Return New List(Of Channel)
             End Try
         End Function
 
@@ -153,6 +154,17 @@ Namespace Helper
                                  Dim response As TVHeadendEPGResponse = JsonConvert.DeserializeObject(json, GetType(TVHeadendEPGResponse))
 
                                  responseItems = response.entries.Where(Function(x) x.ChannelName.Equals(channelName)).ToList
+                                 'close gaps
+                                 Dim prevItem As EpgInfo = Nothing
+                                 For Each item In responseItems
+                                     If prevItem Is Nothing Then
+                                         prevItem = item
+                                         Continue For
+                                     End If
+                                     item.StartTime = prevItem.EndTime
+
+                                     prevItem = item
+                                 Next
                                  Console.WriteLine(String.Format("EPG-Abruf für {0}: {1} Elemente", channelName, responseItems.Count()))
                              End Using
                          Catch ex As Exception

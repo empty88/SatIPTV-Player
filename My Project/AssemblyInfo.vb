@@ -14,7 +14,7 @@ Imports System.Windows
 <Assembly: AssemblyTitle("SatIPTV")>
 <Assembly: AssemblyDescription("")>
 <Assembly: AssemblyCompany("Marco Thönneßen")>
-<Assembly: AssemblyProduct("SatIPTV")>
+<Assembly: AssemblyProduct("Sat>IP TV-Player")>
 <Assembly: AssemblyCopyright("Copyright © Marco Thönneßen 2024")>
 <Assembly: AssemblyTrademark("")>
 <Assembly: ComVisible(false)>
@@ -55,5 +55,5 @@ Imports System.Windows
 ' indem Sie "*" wie unten gezeigt eingeben:
 ' <Assembly: AssemblyVersion("1.0.*")>
 
-<Assembly: AssemblyVersion("1.0.0.0")>
-<Assembly: AssemblyFileVersion("1.0.0.0")>
+<Assembly: AssemblyVersion("1.1.0.0")>
+<Assembly: AssemblyFileVersion("1.1.0.0")>

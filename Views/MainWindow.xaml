@@ -10,31 +10,59 @@
         xmlns:materialIcons="clr-namespace:Material.Icons.WPF;assembly=Material.Icons.WPF"
         mc:Ignorable="d"
         Title="SAT>IP TV-Player" Height="650" Width="1100"
-        MinWidth="750"
-
+        MinWidth="350"
+        x:Name="MainWindow"
         DataContext="{StaticResource MainViewModel}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Style TargetType="{x:Type Border}" x:Key="EpgItemStyle">
             <Style.Setters>
-                <Setter Property="Width" Value="{Binding Duration}" />
+                <Setter Property="Width" Value="{Binding Width}" />
             </Style.Setters>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsLive}" Value="True">
+                    <Setter Property="Background" Value="Goldenrod" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLive}" Value="False">
+                    <Setter Property="Background" Value="Beige" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsPrime}" Value="True" >
+                    <Setter Property="Background" Value="#F0A0A0" />
+                </DataTrigger>
+                <EventTrigger RoutedEvent="Border.MouseEnter" >
+                    <EventTrigger.Actions>
+                        <BeginStoryboard>
+                            <Storyboard FillBehavior="HoldEnd">
+                                <ColorAnimation Duration="0:0:0.15" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="#FF4466BB" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger.Actions>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="Border.MouseLeave">
+                    <EventTrigger.Actions>
+                        <BeginStoryboard>
+                            <Storyboard FillBehavior="Stop">
+                                <ColorAnimation Duration="0:0:0.15" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"  To="Beige" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger.Actions>
+                </EventTrigger>
+            </Style.Triggers>
+            <Style.Resources>
+                <Style TargetType="ToolTip">
+                    <Style.Resources>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="TextWrapping" Value="Wrap" />
+                        </Style>
+                    </Style.Resources>
+                    <Setter Property="MaxWidth" Value="400" />
+                </Style>
+            </Style.Resources>
         </Style>
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition >
-                <ColumnDefinition.Style>
-                    <Style TargetType="ColumnDefinition">
-                        <Setter Property="Width" Value="240" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding ShowChannelList}" Value="False">
-                                <Setter Property="Width" Value="0" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ColumnDefinition.Style>
-            </ColumnDefinition>
+            <ColumnDefinition Width="{Binding ChannelListWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition  Width="*"/>
         </Grid.ColumnDefinitions>
@@ -52,23 +80,23 @@
                 </ItemsPanelTemplate>
             </Menu.ItemsPanel>
             <MenuItem Header="Senderliste" >
-                <MenuItem Header="Anzeigen" IsCheckable="True" IsChecked="{Binding ShowChannelList}" />
+                <MenuItem Header="Anzeigen" IsCheckable="True" IsChecked="{Binding ShowChannelList}" InputGestureText="F1" />
                 <MenuItem   Header="Bearbeiten" Command="{Binding EditChannelListCommand}" Icon="{materialIcons:MaterialIconExt Kind=PlaylistEdit}" />
                 <MenuItem Header="Logos anzeigen" IsCheckable="True" IsChecked="{Binding ShowChannelListLogos}"/>
                 <MenuItem Header="Exportieren" Command="{Binding ExportChannelListCommand}" Icon="{materialIcons:MaterialIconExt Kind=Export}" />
                 <MenuItem Header="Importieren" Command="{Binding ImportChannelListCommand}" Icon="{materialIcons:MaterialIconExt Kind=Import}" />
             </MenuItem>
-            <MenuItem Header="EPG öffnen" Command="{Binding ShowEpgCommand}" />
             <MenuItem Header="Ansicht" >
-                <MenuItem x:Name="MenuItemFullscreen" Header="Vollbild" IsCheckable="True" Checked="MenuItemFullscreen_Checked" Unchecked="MenuItemFullscreen_Unchecked" />
+                <MenuItem x:Name="MenuItemEpg" Header="EPG umschalten" Click="MenuItemEpg_Click" InputGestureText="F2" Visibility="{Binding EpgReady, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <MenuItem x:Name="MenuItemFullscreen" Header="Vollbild" IsCheckable="True" InputGestureText="F12"  Checked="MenuItemFullscreen_Checked" Unchecked="MenuItemFullscreen_Unchecked" />
             </MenuItem>
-            <MenuItem Header="Einstellungen" Command="{Binding OpenSettingsCommand}" />
-            <MenuItem Header="Info" />
+            <MenuItem x:Name="MenuItemSettings" Header="Einstellungen" Click="MenuItemSettings_Click"  />
+            <MenuItem x:Name="MenuItemInfo" Header="Info" Click="MenuItemInfo_Click"  />
             <MenuItem x:Name="CurrentTime" HorizontalAlignment="Right" Focusable="False" IsEnabled="False" />
         </Menu>
 
 
-        <Grid Grid.Row="1" Grid.Column="0" Visibility="{Binding ShowChannelList, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <Grid Grid.Row="1" Grid.Column="0" Visibility="{Binding ShowChannelList, Converter={StaticResource BooleanToVisibilityConverter}}" >
             <Grid.RowDefinitions>
                 <RowDefinition />
             </Grid.RowDefinitions>
@@ -97,9 +125,10 @@
                 </ListView.ItemContainerStyle>
             </ListView>
         </Grid>
-        <GridSplitter Grid.Column="1" Grid.Row="1" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+        <GridSplitter x:Name="ChannelListVideoGridSplitter" Grid.Column="1" Grid.Row="1" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"  ResizeBehavior="PreviousAndNext"
+                      Visibility="{Binding ShowChannelList, Converter={StaticResource BooleanToVisibilityConverter}}" MouseDoubleClick="ChannelListVideoGridSplitter_MouseDoubleClick" />
 
-        <wpf:VideoView x:Name="MediaPlayerControl" MediaPlayer="{Binding MediaPlayer}" Grid.Row="1" Grid.Column="2" Background="Black" Visibility="Visible">
+        <wpf:VideoView x:Name="MediaPlayerControl" MediaPlayer="{Binding MediaPlayer}" Grid.Row="1" Grid.Column="2" Background="Black" >
             <Grid x:Name="OverlayGrid" Background="#01000000" MouseDown="OverlayGrid_MouseDown" MouseMove="OverlayGrid_MouseMove" >
                 <Grid.ContextMenu>
                     <ContextMenu>
@@ -116,9 +145,6 @@
                 </Grid.ColumnDefinitions>
 
                 <Border x:Name="EpgBorder" Grid.Row="1" Grid.ColumnSpan="2" Background="#84000000" Height="150" Cursor="Hand" MouseEnter="EpgBorder_MouseEnter" Visibility="{Binding ShowOsd, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <Border.InputBindings>
-                        <MouseBinding Gesture="LeftClick" Command="{Binding ShowEpgCommand}" />
-                    </Border.InputBindings>
                     <StackPanel Orientation="Vertical" Grid.Row="1" Margin="20,10,20,0">
                         <StackPanel x:Name="EpgTitle" Orientation="Horizontal">
                             <Label Content="{Binding SelectedChannel.CurrentProgram.TimeSpanString}" FontSize="17" Foreground="White" Margin="0,0,5,0" Padding="0" />
@@ -130,106 +156,201 @@
                     </StackPanel>
                 </Border>
 
-                <ScrollViewer Background="#aaaaaa"
-                      Opacity="0.9"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled"
-                      Grid.ColumnSpan="2"
-                      Grid.RowSpan="2"
-                      Visibility="{Binding ShowEpg, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <Grid>
-                        <Grid.ColumnDefinitions >
-                            <ColumnDefinition Width="150"/>
+                <Grid x:Name="EpgView" Grid.ColumnSpan="2" Grid.RowSpan="2" Visibility="Hidden"  Background="#aaaaaa" Opacity="0.95">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="1" Margin="3,3,3,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-
-                        <ItemsControl ItemsSource="{Binding ChannelList}" Grid.Column="0">
+                        <Button x:Name="EpgNowButton"  Content="Jetzt" Click="EpgNowButton_Click" Width="40" Height="30" Grid.Column="0"/>
+                        <Button x:Name="EpgPrimeButton"  Content="20:15" Click="EpgPrimeButton_Click" Width="40" Height="30" Grid.Column="1"/>
+                        <TextBox x:Name="EpgDayTitle" Grid.Column="2" FontSize="25" FontWeight="Bold" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                 Foreground="White" Background="Transparent" BorderBrush="Transparent" VerticalContentAlignment="Center" IsHitTestVisible="False" IsReadOnly="True" >
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Style.Triggers>
+                                        <EventTrigger RoutedEvent="TextChanged" >
+                                            <BeginStoryboard>
+                                                <Storyboard FillBehavior="Stop" >
+                                                    <ColorAnimation Storyboard.TargetProperty="(TextBox.Foreground).(SolidColorBrush.Color)" From="White" To="Red" AutoReverse="True" Duration="0:0:0.30" />
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                        <Button x:Name="EpgPrev24hButton" Content="-24h" Click="EpgPrev24hButton_Click" Grid.Column="3" Width="40" Height="30" />
+                        <Button x:Name="EpgNext24hButton" Content="+24h" Click="EpgNext24hButton_Click" Grid.Column="4" Width="40" Height="30" />
+                    </Grid>
+                    <ScrollViewer x:Name="TimelineScrollView" Grid.Row="1" Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding TimelineElements}" Height="22" Margin="0,2,0,2" >
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="ChannelViewModel" >
-                                    <StackPanel Orientation="Horizontal" Height="40" Grid.ColumnSpan="2">
-                                        <Image Source="{Binding Logo}" Width="50" />
-                                        <TextBlock Text="{Binding DisplayName}" Width="100" VerticalAlignment="Center" />
-                                    </StackPanel>
+                                    <Grid Margin="{Binding Margin}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Text="{Binding Text}" Foreground="White" Grid.Row="0"/>
+                                        <StackPanel Orientation="Horizontal" Grid.Row="1" Width="180">
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="9" VerticalAlignment="Top"/>
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="red" Margin="0,0,4,0" Height="9" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="red" Margin="0,0,4,0" Height="9" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="red" Margin="0,0,4,0" Height="9" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="red" Margin="0,0,4,0" Height="9" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="red" Margin="0,0,4,0" Height="9" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                            <Border BorderThickness="2,0,0,0" BorderBrush="White" Margin="0,0,4,0" Height="5" VerticalAlignment="Top" />
+                                        </StackPanel>
+                                    </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Vertical" />
+                                    <StackPanel Orientation="Horizontal" />
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                         </ItemsControl>
+                    </ScrollViewer>
+                    <ScrollViewer x:Name="EpgChannelScrollView"
+                          VerticalScrollBarVisibility="Hidden"
+                          HorizontalScrollBarVisibility="Disabled"
+                                      Grid.Row="2"
+                                      Grid.ColumnSpan="2"
+                          >
+                        <Grid>
+                            <Grid.ColumnDefinitions >
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
 
-                        <ScrollViewer  x:Name="EpgScrollView" HorizontalScrollBarVisibility="Auto" Grid.Column="1">
-                            <Grid>
-                                <ItemsControl ItemsSource="{Binding ChannelList}" Grid.Column="1">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="ChannelViewModel" >
+                            <ItemsControl ItemsSource="{Binding ChannelList}" Grid.Column="0" Margin="0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="ChannelViewModel" >
+                                        <StackPanel Orientation="Horizontal" Height="40" Grid.ColumnSpan="2">
+                                            <Image Source="{Binding Logo}" Width="50" />
+                                            <TextBlock Text="{Binding DisplayName}" Width="100" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Vertical" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
 
-                                            <ItemsControl ItemsSource="{Binding EpgInfos}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate DataType="EpgInfoViewModel" >
-                                                        <Border x:Name="EpgItem" BorderThickness="1" BorderBrush="Black" ToolTip="{Binding Tooltip}"  Height="40" Background="Beige" Opacity="0.9" Padding="2" Style="{StaticResource EpgItemStyle}">
-                                                            <Border.Triggers>
-                                                                <EventTrigger RoutedEvent="Border.MouseEnter" >
-                                                                    <EventTrigger.Actions>
-                                                                        <BeginStoryboard>
-                                                                            <Storyboard FillBehavior="HoldEnd">
-                                                                                <ColorAnimation Duration="0:0:0.15" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="#FF4466BB" />
-                                                                            </Storyboard>
-                                                                        </BeginStoryboard>
-                                                                    </EventTrigger.Actions>
-                                                                </EventTrigger>
-                                                                <EventTrigger RoutedEvent="Border.MouseLeave">
-                                                                    <EventTrigger.Actions>
-                                                                        <BeginStoryboard>
-                                                                            <Storyboard FillBehavior="Stop">
-                                                                                <ColorAnimation Duration="0:0:0.15" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" From="Red" To="Beige" />
-                                                                            </Storyboard>
-                                                                        </BeginStoryboard>
-                                                                    </EventTrigger.Actions>
-                                                                </EventTrigger>
-                                                            </Border.Triggers>
-                                                            <StackPanel Orientation="Vertical">
-                                                                <TextBlock Text="{Binding Title}" FontSize="14" />
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="{Binding TimeSpanString}" FontSize="10" Margin="0,0,10,0" />
-                                                                    <TextBlock Text="{Binding SubTitle}" FontSize="10" />
+                            <ScrollViewer x:Name="EpgProgramScrollView" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Grid.Column="1">
+                                <Grid>
+                                    <ItemsControl ItemsSource="{Binding ChannelList}" Grid.Column="1" Grid.Row="1">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="ChannelViewModel" >
+                                                <ItemsControl ItemsSource="{Binding EpgInfos}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="EpgInfoViewModel" >
+                                                            <Border x:Name="EpgItem" BorderThickness="1" BorderBrush="Black"
+                                                                Height="40" Opacity="0.9" Padding="2" Style="{StaticResource EpgItemStyle}"
+                                                                    PreviewMouseLeftButtonDown="EpgItem_PreviewMouseLeftButtonDown"
+                                                                    PreviewMouseLeftButtonUp="EpgItem_PreviewMouseLeftButtonUp"
+                                                                    PreviewMouseMove="EpgItem_PreviewMouseMove">
+                                                                <StackPanel Orientation="Vertical">
+                                                                    <TextBlock Text="{Binding Title}" FontSize="14" />
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock Text="{Binding TimeSpanString}" FontSize="10" Margin="0,0,10,0" />
+                                                                        <TextBlock Text="{Binding SubTitle}" FontSize="10" />
+                                                                    </StackPanel>
                                                                 </StackPanel>
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <StackPanel Orientation="Horizontal" />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                            </ItemsControl>
-
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Vertical" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                </ItemsControl>
-                                <Border Height="550" Width="2" Background="red" HorizontalAlignment="Left"
-                                    VerticalAlignment="Top" Margin="300,0,0,0" />
-                            </Grid>
-                        </ScrollViewer>
-                    </Grid>
-                </ScrollViewer>
-
+                                                                <Border.ToolTip>
+                                                                    <ToolTip MaxWidth="500">
+                                                                        <TextBlock Text="{Binding Tooltip}" TextWrapping="Wrap" />
+                                                                    </ToolTip>
+                                                                </Border.ToolTip>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                </ItemsControl>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Vertical" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                    </ItemsControl>
+                                    <Border x:Name="CurrentTimeBar"  Height="550" Width="2" Background="#44FF0000" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="1" />
+                                    <Border x:Name="MouseTimeBar" Height="550" Width="1" BorderThickness="1,0,1,1" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="1" IsHitTestVisible="False" >
+                                        <Border.BorderBrush>
+                                            <DrawingBrush Viewport="0,0,8,8" ViewportUnits="Absolute" TileMode="Tile">
+                                                <DrawingBrush.Drawing>
+                                                    <DrawingGroup>
+                                                        <GeometryDrawing Brush="Gray">
+                                                            <GeometryDrawing.Geometry>
+                                                                <GeometryGroup>
+                                                                    <RectangleGeometry Rect="0,0,50,50" />
+                                                                    <RectangleGeometry Rect="50,50,50,50" />
+                                                                </GeometryGroup>
+                                                            </GeometryDrawing.Geometry>
+                                                        </GeometryDrawing>
+                                                    </DrawingGroup>
+                                                </DrawingBrush.Drawing>
+                                            </DrawingBrush>
+                                        </Border.BorderBrush>
+                                    </Border>
+                                </Grid>
+                            </ScrollViewer>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
             </Grid>
         </wpf:VideoView>
         
-
+        <!-- Status bar -->
         <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"  Height="27">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="400" />
-                <ColumnDefinition Width="260" />
-                <ColumnDefinition Width="Auto"  />
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="230" />
+                <ColumnDefinition Width="30" />
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Grid.Column="0">
                 <Label Content="{Binding SelectedChannel.DisplayName}" />
@@ -257,7 +378,17 @@
                     </Button.Style>
                 </Button>
             </StackPanel>
-            <Label x:Name="ErrorDisplay" Content="{Binding ErrorString}" Grid.Column="2" Padding="0,2,0,2" Background="Red" ToolTip="{Binding ErrorString}" MouseLeftButtonDown="ErrorDisplay_MouseLeftButtonDown" VerticalContentAlignment="Center" />
+            <Label Content="{materialIcons:MaterialIconExt Kind=AlertBox}" ToolTip="{Binding ErrorString}" ToolTipService.InitialShowDelay="0" Foreground="red" HorizontalAlignment="Right" Grid.Column="2"  MouseLeftButtonDown="ErrorDisplay_MouseLeftButtonDown">
+                <Label.Style>
+                    <Style TargetType="Label">
+                        <Style.Triggers>
+                            <Trigger Property="ToolTip" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Hidden" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Label.Style>
+            </Label>
         </Grid>
 
     </Grid>

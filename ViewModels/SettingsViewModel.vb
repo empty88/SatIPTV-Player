@@ -17,6 +17,7 @@ Namespace ViewModels
 
         Public Property TvHeadendUser As String
         Public Property TvHeadendPassword As SecureString
+        Public Property DVBSChannelListUrl As String
 
         Public Property SaveCommand As DelegateCommand
 
@@ -28,6 +29,7 @@ Namespace ViewModels
             TvHeadendServer = My.Settings.TvHeadendServer
             TvHeadendUser = My.Settings.TvHeadendUser
             TvHeadendPassword = EncryptionHelper.DecryptString(My.Settings.TvHeadendPassword)
+            DVBSChannelListUrl = My.Settings.DVBSChannelListUrl
         End Sub
 
         Private Sub SaveCommandExecute()
@@ -35,6 +37,7 @@ Namespace ViewModels
             My.Settings.TvHeadendServer = TvHeadendServer
             My.Settings.TvHeadendUser = TvHeadendUser
             My.Settings.TvHeadendPassword = EncryptionHelper.EncryptString(TvHeadendPassword)
+            My.Settings.DVBSChannelListUrl = DVBSChannelListUrl
             My.Settings.Save()
             CloseWindow()
         End Sub

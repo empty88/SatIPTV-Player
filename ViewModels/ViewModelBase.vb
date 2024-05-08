@@ -30,17 +30,21 @@ Namespace ViewModels
 
         Public Sub CloseCommandExecute()
             If _closing Then Exit Sub
+            GetWindow.Close()
+            _closing = False
+        End Sub
+
+        Public Function GetWindow() As Window
             For Each window As Window In System.Windows.Application.Current.Windows
                 Try
                     If window.DataContext Is Me Then
-                        _closing = True
-                        window.Close()
+                        Return window
                     End If
                 Catch ex As Exception
                 End Try
             Next
-            _closing = False
-        End Sub
+        End Function
+
 
         Public Sub CloseWindow()
             CloseCommandExecute()

@@ -62,19 +62,7 @@ Namespace ViewModels.Models
             Catch ex As Exception
             End Try
             Dim epg As New List(Of EpgInfo)
-            Task.Run(Sub()
-                         If My.Settings.UseTvHeadend Then epg = NetworkHelper.GetAllEpgFromTvHeadend(displayName)
-                     End Sub).ContinueWith(Sub()
-                                               Application.Current.Dispatcher.Invoke(Sub()
-                                                                                         EpgInfos.AddRange(epg.Select(Function(x) New EpgInfoViewModel(x)))
-                                                                                         CurrentProgram = epg.FirstOrDefault()
-                                                                                     End Sub)
 
-                                           End Sub)
-        End Sub
-        Public Sub New(displayName As String, streamUrl As String, currentProgram As EpgInfo)
-            Me.New(displayName, streamUrl)
-            Me.CurrentProgram = currentProgram
         End Sub
 
         Private Sub ProgressUpdate(state As Object)

@@ -76,6 +76,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <NoWarn>41999,42016,42017,42018,42019,42020,42021,42022,42032,42036</NoWarn>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Logo.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="FontAwesome.WPF, Version=4.7.0.37774, Culture=neutral, PublicKeyToken=0758b07a11a4f466, processorArchitecture=MSIL">
       <HintPath>packages\FontAwesome.WPF.4.7.0.9\lib\net40\FontAwesome.WPF.dll</HintPath>
@@ -158,11 +161,19 @@
     <Compile Include="ViewModels\Models\ChannelViewModel.vb" />
     <Compile Include="ViewModels\Models\EpgInfoViewModel.vb" />
     <Compile Include="ViewModels\Models\SatIpServerViewModel.vb" />
+    <Compile Include="ViewModels\Models\TimelineElement.vb" />
     <Compile Include="ViewModels\SettingsViewModel.vb" />
     <Compile Include="ViewModels\ViewModelBase.vb" />
+    <Compile Include="Views\AboutView.xaml.vb">
+      <DependentUpon>AboutView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\SettingsView.xaml.vb">
       <DependentUpon>SettingsView.xaml</DependentUpon>
     </Compile>
+    <Page Include="Views\AboutView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\EditChannelListView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -241,6 +252,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Logo.ico" />
     <Resource Include="picons\0.png" />
     <Resource Include="picons\00sheroes.png" />
     <Resource Include="picons\01bbcone.png" />
@@ -17380,6 +17392,7 @@
     <Resource Include="picons\zvtavs.png" />
     <Resource Include="picons\zweimusictelevision.png" />
     <Resource Include="picons\zzik.png" />
+    <Compile Include="Classes\KeyboardListener.vb" />
     <Content Include="libvlc\libvlc.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

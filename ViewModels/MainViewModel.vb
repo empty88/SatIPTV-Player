@@ -19,6 +19,8 @@ Namespace ViewModels
         Private _currentVolume As Integer
         Private _selectedChannel As ChannelViewModel
         Private _osdTimer As New System.Threading.Timer(AddressOf OsdTimerCallback, Nothing, Timeout.Infinite, Timeout.Infinite)
+        Public Shared _epgStartTime As DateTime
+        Public Shared _epgEndTime As DateTime
 
         Private _currentProgramUpdateTimer As New System.Threading.Timer(AddressOf CurrentProgramUpdateTimerCallback, Nothing, 20000, 20000)
 
@@ -44,6 +46,8 @@ Namespace ViewModels
         Private _fullscreen As Boolean
         Private _showEpg As Boolean
         Private _currentTime As String
+        Private _channelListWidth As GridLength
+        Private _epgReady As Boolean
 
         Public Shared Property ErrorString As String
             Get
@@ -75,7 +79,9 @@ Namespace ViewModels
             End Get
             Set(value As ChannelViewModel)
                 _selectedChannel = value
-                If value IsNot Nothing Then ActivateChannel(value.StreamUrl)
+                If value IsNot Nothing Then
+                    ActivateChannel(value.StreamUrl)
+                End If
                 NotifyPropertyChanged("SelectedChannel")
             End Set
         End Property
@@ -87,7 +93,11 @@ Namespace ViewModels
             Set(value As Boolean)
                 _showChannelList = value
                 My.Settings.ShowChannelList = value
-                My.Settings.Save()
+                If value Then
+                    ChannelListWidth = New GridLength(My.Settings.ChannelListWidth)
+                Else
+                    ChannelListWidth = New GridLength(0)
+                End If
                 NotifyPropertyChanged("ShowChannelList")
             End Set
         End Property
@@ -101,6 +111,17 @@ Namespace ViewModels
                 My.Settings.ShowChannelListLogos = value
                 My.Settings.Save()
                 NotifyPropertyChanged("ShowChannelListLogos")
+            End Set
+        End Property
+
+        Public Property ChannelListWidth As GridLength
+            Get
+                Return _channelListWidth
+            End Get
+            Set(value As GridLength)
+                _channelListWidth = value
+                If Not value.Value.Equals(0) Then My.Settings.ChannelListWidth = value.Value
+                NotifyPropertyChanged("ChannelListWidth")
             End Set
         End Property
 
@@ -127,42 +148,6 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property Fullscreen As Boolean
-            Get
-                Return _fullscreen
-            End Get
-            Set(value As Boolean)
-                _fullscreen = value
-
-                For Each window As Window In System.Windows.Application.Current.Windows
-                    Try
-                        If window.DataContext Is Me Then
-                            Dim currentScreen As Screen = Screen.FromPoint(New System.Drawing.Point(window.Left, window.Top))
-                            If value Then
-                                window.Top = currentScreen.WorkingArea.Top
-                                window.Left = currentScreen.WorkingArea.Left
-                                window.Width = currentScreen.Bounds.Width
-                                window.Height = currentScreen.Bounds.Height
-                                window.WindowStartupLocation = WindowStartupLocation.Manual
-                                window.ResizeMode = ResizeMode.NoResize
-                                window.WindowStyle = WindowStyle.None
-                                window.WindowState = WindowState.Maximized
-                            Else
-                                window.Top = currentScreen.WorkingArea.Top
-                                window.Left = currentScreen.WorkingArea.Left
-                                window.Width = currentScreen.Bounds.Width
-                                window.Height = currentScreen.Bounds.Height
-                                window.ResizeMode = ResizeMode.CanResize
-                                window.WindowStyle = WindowStyle.ThreeDBorderWindow
-                            End If
-                        End If
-                    Catch ex As Exception
-                    End Try
-                Next
-                NotifyPropertyChanged(Fullscreen)
-            End Set
-        End Property
-
         Public Property ShowOsd As Boolean
             Get
                 Return _showOsd
@@ -174,31 +159,17 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property ShowEpg As Boolean
+        Public Property EpgReady As Boolean
             Get
-                Return _showEpg
+                Return _epgReady
             End Get
             Set(value As Boolean)
-                _showEpg = value
-                If value Then CalculateEpg()
-                NotifyPropertyChanged("ShowEpg")
+                _epgReady = value
+                NotifyPropertyChanged("EpgReady")
             End Set
         End Property
 
-        Private Sub CalculateEpg()
-            Dim earliestEpg As EpgInfoViewModel = Nothing
-            For Each channel In ChannelList
-                Dim firstEpg = channel.EpgInfos.FirstOrDefault()
-                If earliestEpg Is Nothing OrElse (firstEpg IsNot Nothing AndAlso firstEpg.StartTime < earliestEpg.StartTime) Then earliestEpg = firstEpg
-            Next
-            For Each channel In ChannelList
-                Dim firstEpg = channel.EpgInfos.FirstOrDefault()
-                If firstEpg.Title Is Nothing Then Continue For
-
-                Dim difference As Long = firstEpg.StartTime - earliestEpg.StartTime
-                channel.EpgInfos.Insert(0, New EpgInfoViewModel(difference))
-            Next
-        End Sub
+        Public Property TimelineElements As List(Of TimelineElement)
 
         Public Property EditChannelListCommand As DelegateCommand
         Public Property MuteCommand As DelegateCommand
@@ -206,16 +177,19 @@ Namespace ViewModels
         Public Property VolumeSliderDoubleClickCommand As DelegateCommand
         Public Property ExportChannelListCommand As DelegateCommand
         Public Property ImportChannelListCommand As DelegateCommand
-        Public Property OpenSettingsCommand As DelegateCommand
-
-        Public Property ShowEpgCommand As DelegateCommand
 
         Public Sub New()
             MediaPlayer = New MediaPlayer(_libVLC)
             ChannelList = New ObservableCollection(Of ChannelViewModel)
+            TimelineElements = New List(Of TimelineElement)
             CurrentVolume = 100
+            Mute = False
 
-            LoadChannelList()
+            If MediaPlayer.Mute Then MediaPlayer.ToggleMute()
+
+            LoadChannelList().ContinueWith(Sub()
+                                               CalculateEpg()
+                                           End Sub)
 
             If Not ChannelList.Count.Equals(0) Then SelectedChannel = ChannelList.First()
 
@@ -224,21 +198,13 @@ Namespace ViewModels
             VolumeSliderDoubleClickCommand = New DelegateCommand(AddressOf VolumeSliderDoubleClickCommandExecute)
             ExportChannelListCommand = New DelegateCommand(AddressOf ExportChannelListCommandExecute)
             ImportChannelListCommand = New DelegateCommand(AddressOf ImportChannelListCommandExecute)
-            OpenSettingsCommand = New DelegateCommand(AddressOf OpenSettingsCommandExecute)
-            ShowEpgCommand = New DelegateCommand(AddressOf ShowEpgCommandExecute)
 
             ShowChannelListLogos = My.Settings.ShowChannelListLogos
             ShowChannelList = My.Settings.ShowChannelList
+            If ShowChannelList Then ChannelListWidth = New GridLength(My.Settings.ChannelListWidth)
         End Sub
 
-        Private Sub ShowEpgCommandExecute()
-            ShowEpg = True
-        End Sub
-
-        Private Sub OpenSettingsCommandExecute()
-            Dim window As New SettingsView()
-            window.ShowDialog()
-        End Sub
+#Region "Commands"
 
         Private Sub ImportChannelListCommandExecute()
             Dim oldSelectedChannelName As String = Nothing
@@ -321,33 +287,13 @@ Namespace ViewModels
             CurrentVolume = 100
         End Sub
 
-        Private Sub LoadChannelList()
-            '_currentProgramUpdateTimer.Change(Timeout.Infinite, Timeout.Infinite)
-            SelectedChannel = Nothing
-            My.Settings.Reload()
-            ChannelList.Clear()
-            For Each channel In My.Settings.ChannelList
-                Dim chArr As String() = channel.Split("""")
-                Dim currentEpg As EpgInfo
-                ChannelList.Add(New ChannelViewModel(chArr(1), chArr(3), currentEpg))
-                Console.WriteLine(chArr(1) & " geladen")
-            Next
-            '_currentProgramUpdateTimer.Change(20000, 20000)
-            SelectedChannel = ChannelList.FirstOrDefault()
-        End Sub
-
-        Private Sub UpdateVolume(sender As Object, e As MediaPlayerVolumeChangedEventArgs)
-            Application.Current.Dispatcher.Invoke(Sub()
-                                                      CurrentVolume = e.Volume * 100
-                                                  End Sub)
-        End Sub
-
         Private Sub EditChannelListCommandExecute()
             Dim previousSelectedChannelName As String
             If SelectedChannel IsNot Nothing Then previousSelectedChannelName = SelectedChannel.DisplayName
             Dim vm As New EditChannelListViewModel()
             Dim window As New EditChannelListView()
             window.DataContext = vm
+            window.Owner = GetWindow()
             window.ShowDialog()
 
             LoadChannelList()
@@ -362,6 +308,81 @@ Namespace ViewModels
         Private Sub MuteCommandExecute()
             MediaPlayer.ToggleMute()
             Mute = Not Mute
+        End Sub
+
+#End Region
+
+        Public Function CalculateEpg() As Boolean
+            Dim earliestEpg As EpgInfoViewModel = Nothing
+            Dim latestEpg As EpgInfoViewModel = Nothing
+            For Each channel In ChannelList
+                Dim firstEpg = channel.EpgInfos.FirstOrDefault()
+                If earliestEpg Is Nothing OrElse (firstEpg IsNot Nothing AndAlso firstEpg.StartTime < earliestEpg.StartTime) Then earliestEpg = firstEpg
+                Dim lastEpg = channel.EpgInfos.LastOrDefault()
+                If latestEpg Is Nothing OrElse (lastEpg IsNot Nothing AndAlso lastEpg.EndTime > latestEpg.EndTime) Then latestEpg = lastEpg
+            Next
+
+            For Each channel In ChannelList
+                Dim firstEpg = channel.EpgInfos.FirstOrDefault()
+                If firstEpg Is Nothing OrElse firstEpg.StartTime.Equals("0") Then Return False
+
+                Dim difference As Long = firstEpg.StartTime - earliestEpg.StartTime
+                Application.Current.Dispatcher.Invoke(Sub() channel.EpgInfos.Insert(0, New EpgInfoViewModel(difference)))
+            Next
+            If earliestEpg Is Nothing Then Return False
+            _epgStartTime = earliestEpg.GetLocalStartTime()
+            _epgEndTime = latestEpg.GetLocalEndTime()
+            If TimelineElements.Count.Equals(0) Then
+                Dim firstTime As DateTime
+                If _epgStartTime.Minute >= 30 Then
+                    firstTime = New Date(_epgStartTime.Year, _epgStartTime.Month, _epgStartTime.Day, _epgStartTime.Hour, 30, 0)
+                    Application.Current.Dispatcher.Invoke(Sub() TimelineElements.Add(New TimelineElement(String.Format("{0:d2}:{1:d2}", _epgStartTime.Hour, 30)) With {.Margin = New Thickness(((_epgStartTime.Minute - 30) * 60 + _epgStartTime.Second) / -10, 0, 0, 0)}))
+                Else
+                    firstTime = New Date(_epgStartTime.Year, _epgStartTime.Month, _epgStartTime.Day, _epgStartTime.Hour, 0, 0)
+                    Application.Current.Dispatcher.Invoke(Sub() TimelineElements.Add(New TimelineElement(String.Format("{0:d2}:{1:d2}", _epgStartTime.Hour, 0)) With {.Margin = New Thickness((_epgStartTime.Minute * 60 + _epgStartTime.Second) / -10, 0, 0, 0)}))
+                End If
+                Dim elementTime As Date = firstTime
+                For i = 0 To (_epgEndTime - _epgStartTime).TotalMinutes / 30
+                    elementTime = elementTime.AddMinutes(30)
+                    Application.Current.Dispatcher.Invoke(Sub() TimelineElements.Add(New TimelineElement(elementTime.ToString("HH:mm"))))
+                Next
+            End If
+            EpgReady = True
+            Return True
+        End Function
+
+        Private Function LoadChannelList() As Task
+            Dim channelVm As ChannelViewModel = Nothing
+            Dim epgs As List(Of EpgInfo)
+            SelectedChannel = Nothing
+            My.Settings.Reload()
+            ChannelList.Clear()
+            Return Task.Run(Sub()
+                                For Each channel In My.Settings.ChannelList
+                                    Dim chArr As String() = channel.Split("""")
+                                    Dim currentEpg As EpgInfo
+
+                                    If My.Settings.UseTvHeadend Then
+                                        epgs = NetworkHelper.GetAllEpgFromTvHeadend(chArr(1))
+                                        Application.Current.Dispatcher.Invoke(Sub()
+                                                                                  channelVm = New ChannelViewModel(chArr(1), chArr(3))
+                                                                                  channelVm.EpgInfos.AddRange(epgs.Select(Function(x) New EpgInfoViewModel(x, channelVm)))
+                                                                                  channelVm.CurrentProgram = channelVm.EpgInfos.FirstOrDefault().EpgInfo
+                                                                              End Sub)
+                                    End If
+
+                                    Application.Current.Dispatcher.Invoke(Sub() ChannelList.Add(channelVm))
+                                    Console.WriteLine(chArr(1) & " geladen")
+                                Next
+
+                                SelectedChannel = ChannelList.FirstOrDefault()
+                            End Sub)
+        End Function
+
+        Private Sub UpdateVolume(sender As Object, e As MediaPlayerVolumeChangedEventArgs)
+            Application.Current.Dispatcher.Invoke(Sub()
+                                                      CurrentVolume = e.Volume * 100
+                                                  End Sub)
         End Sub
 
         Private Sub UpdateMeta(sender As Object, e As MediaMetaChangedEventArgs)

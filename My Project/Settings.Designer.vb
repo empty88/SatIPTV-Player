@@ -151,6 +151,18 @@ Namespace My
                 Me("TvHeadendPassword") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("240")>  _
+        Public Property ChannelListWidth() As Integer
+            Get
+                Return CType(Me("ChannelListWidth"),Integer)
+            End Get
+            Set
+                Me("ChannelListWidth") = value
+            End Set
+        End Property
     End Class
 End Namespace
 

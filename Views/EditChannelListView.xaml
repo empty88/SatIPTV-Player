@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:SatIPTV"
         xmlns:materialIcons="clr-namespace:Material.Icons.WPF;assembly=Material.Icons.WPF" xmlns:fa="http://schemas.fontawesome.io/icons/"
         mc:Ignorable="d"
+        WindowStartupLocation="CenterOwner"
         Title="Senderliste" Height="700" Width="1100">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -36,8 +37,8 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <StackPanel Orientation="Vertical" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" Margin="2">
-                    <Button Content="{materialIcons:MaterialIconExt Kind=Plus}" Command="{Binding AddChannelCommand}" Margin="2" Width="35" ToolTip="Sender hinzufügen" />
+            <StackPanel Orientation="Vertical" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" Margin="2,0,2,2">
+                    <Button Content="{materialIcons:MaterialIconExt Kind=Plus}" Command="{Binding AddChannelCommand}" Margin="2,0,2,2" Width="35" ToolTip="Sender hinzufügen" />
                     <Button Content="{materialIcons:MaterialIconExt Kind=Minus}" Command="{Binding RemoveChannelCommand}" Margin="2" Width="35" ToolTip="Sender entfernen" />
                     <Button Content="{materialIcons:MaterialIconExt Kind=MenuUp}" Command="{Binding MoveChannelUpCommand}" Margin="2" Width="35" ToolTip="Sender nach oben verschieben" />
                     <Button Content="{materialIcons:MaterialIconExt Kind=MenuDown}" Command="{Binding MoveChannelDownCommand}" Margin="2" Width="35" ToolTip="Sender nach unten verschieben" />
@@ -55,8 +56,8 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <StackPanel Orientation="Horizontal" Grid.ColumnSpan="2">
-                <Label Content="Server:"  Width="70" />
-                <ComboBox ItemsSource="{Binding ServerList}" DisplayMemberPath="DisplayName" SelectedItem="{Binding SelectedServer}" Width="300" />
+                <Label Content="Server:"  Width="70" VerticalContentAlignment="Center" />
+                <ComboBox ItemsSource="{Binding ServerList}" DisplayMemberPath="DisplayName" SelectedItem="{Binding SelectedServer}" Width="300" VerticalContentAlignment="Center" />
                 <Button Content="{materialIcons:MaterialIconExt Kind=Refresh}" Command="{Binding RefreshServerListCommand}" Width="35" Margin="5,0,0,0" />
 
             </StackPanel>
