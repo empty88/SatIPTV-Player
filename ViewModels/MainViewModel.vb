@@ -210,12 +210,14 @@ Namespace ViewModels
 #Region "Commands"
 
         Private Sub OpenSettingsCommandExecute()
+            _currentProgramUpdateTimer.Change(Timeout.Infinite, Timeout.Infinite)
             Dim window As New SettingsView()
             window.Owner = GetWindow()
             window.DataContext = New SettingsViewModel()
             If window.ShowDialog() Then
                 LoadChannelList().ContinueWith(Sub()
                                                    CalculateEpg()
+                                                   _currentProgramUpdateTimer.Change(20000, 20000)
                                                End Sub)
             End If
         End Sub
@@ -274,7 +276,7 @@ Namespace ViewModels
 
         Private Sub ExportChannelListCommandExecute()
             Dim Dialog = New Microsoft.Win32.SaveFileDialog()
-            Dialog.FileName = String.Format("{0:yyyy-mm-dd} Senderliste", Date.Now)
+            Dialog.FileName = String.Format("{0:yyyy-MM-dd} Senderliste", Date.Now)
             Dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.CommonDocuments)
             Dialog.DefaultExt = ".m3u"
             Dialog.Filter = "Senderliste (.m3u)|*.m3u"
@@ -304,7 +306,8 @@ Namespace ViewModels
         End Sub
 
         Private Sub EditChannelListCommandExecute()
-            Dim previousSelectedChannelName As String
+            _currentProgramUpdateTimer.Change(Timeout.Infinite, Timeout.Infinite)
+            Dim previousSelectedChannelName As String = String.Empty
             If SelectedChannel IsNot Nothing Then previousSelectedChannelName = SelectedChannel.DisplayName
             Dim vm As New EditChannelListViewModel()
             Dim window As New EditChannelListView()
@@ -313,13 +316,17 @@ Namespace ViewModels
             If window.ShowDialog() Then
                 LoadChannelList().ContinueWith(Sub()
                                                    CalculateEpg()
+
+                                                   Application.Current.Dispatcher.Invoke(Sub()
+                                                                                             Dim newChannel As ChannelViewModel = ChannelList.FirstOrDefault(Function(x) x.DisplayName.Equals(previousSelectedChannelName))
+                                                                                             If Not ChannelList.Count.Equals(0) AndAlso newChannel Is Nothing Then
+                                                                                                 SelectedChannel = ChannelList.First()
+                                                                                             ElseIf newChannel IsNot Nothing Then
+                                                                                                 SelectedChannel = newChannel
+                                                                                             End If
+                                                                                         End Sub)
+                                                   _currentProgramUpdateTimer.Change(20000, 20000)
                                                End Sub)
-                Dim newChannel As ChannelViewModel = ChannelList.FirstOrDefault(Function(x) x.DisplayName.Equals(previousSelectedChannelName))
-                If Not ChannelList.Count.Equals(0) AndAlso newChannel Is Nothing Then
-                    SelectedChannel = ChannelList.First()
-                ElseIf newChannel IsNot Nothing Then
-                    SelectedChannel = newChannel
-                End If
             End If
         End Sub
 
@@ -379,14 +386,13 @@ Namespace ViewModels
             Return Task.Run(Sub()
                                 For Each channel In My.Settings.ChannelList
                                     Dim chArr As String() = channel.Split("""")
-                                    Dim currentEpg As EpgInfo
                                     Application.Current.Dispatcher.Invoke(Sub() channelVm = New ChannelViewModel(chArr(1), chArr(3)))
 
                                     If My.Settings.UseTvHeadend Then
                                         epgs = NetworkHelper.GetAllEpgFromTvHeadend(chArr(1))
                                         Application.Current.Dispatcher.Invoke(Sub()
                                                                                   channelVm.EpgInfos.AddRange(epgs.Select(Function(x) New EpgInfoViewModel(x, channelVm)))
-                                                                                  channelVm.CurrentProgram = channelVm.EpgInfos.FirstOrDefault().EpgInfo
+                                                                                  If Not channelVm.EpgInfos.Count.Equals(0) Then channelVm.CurrentProgram = channelVm.EpgInfos.FirstOrDefault().EpgInfo
                                                                               End Sub)
                                     End If
 

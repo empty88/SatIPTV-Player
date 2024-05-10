@@ -7,7 +7,7 @@
 &lt;ArrayOfString xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" /&gt;</Value>
     </Setting>
     <Setting Name="DVBSChannelListUrl" Type="System.String" Scope="User">
-      <Value Profile="(Default)">https://raw.githubusercontent.com/dersnyke/satipplaylists/main/satip_astra192e.m3u</Value>
+      <Value Profile="(Default)">https://raw.githubusercontent.com/dersnyke/satipplaylists/main/satip_astra192e_tv.m3u</Value>
     </Setting>
     <Setting Name="TvHeadendServer" Type="System.String" Scope="User">
       <Value Profile="(Default)">http://beispiel:9981</Value>

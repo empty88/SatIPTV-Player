@@ -69,8 +69,8 @@ Namespace My
         
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-         Global.System.Configuration.DefaultSettingValueAttribute("https://raw.githubusercontent.com/dersnyke/satipplaylists/main/satip_astra192e.m3"& _ 
-            "u")>  _
+         Global.System.Configuration.DefaultSettingValueAttribute("https://raw.githubusercontent.com/dersnyke/satipplaylists/main/satip_astra192e_tv"& _ 
+            ".m3u")>  _
         Public Property DVBSChannelListUrl() As String
             Get
                 Return CType(Me("DVBSChannelListUrl"),String)

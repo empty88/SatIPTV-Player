@@ -65,7 +65,7 @@ Namespace Helper
                     Dim friendlyName As String = xmlDoc.SelectSingleNode("//ns:friendlyName", nameSpaceManager).InnerText
                     Dim satIpCap As String = xmlDoc.SelectSingleNode("//satip:X_SATIPCAP", nameSpaceManager).InnerText
                     Dim satIpM3u As String = If(xmlDoc.SelectSingleNode("//satip:X_SATIPM3U", nameSpaceManager) IsNot Nothing, xmlDoc.SelectSingleNode("//satip:X_SATIPM3U", nameSpaceManager).InnerText, Nothing)
-                    Dim channels As List(Of Channel)
+                    Dim channels As List(Of Channel) = Nothing
 
                     If satIpM3u IsNot Nothing Then
                         Dim m3uContent As String = webClient.DownloadString(satIpM3u)
@@ -86,7 +86,7 @@ Namespace Helper
             Dim result As New List(Of Channel)
             Using stringReader As New StringReader(content)
                 Dim line As String
-                Dim channel As Channel
+                Dim channel As Channel = Nothing
                 While True
                     line = stringReader.ReadLine()
                     If line Is Nothing Then Return result

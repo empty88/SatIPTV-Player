@@ -97,12 +97,9 @@
 
 
         <Grid Grid.Row="1" Grid.Column="0" Visibility="{Binding ShowChannelList, Converter={StaticResource BooleanToVisibilityConverter}}" >
-            <Grid.RowDefinitions>
-                <RowDefinition />
-            </Grid.RowDefinitions>
             <ListView ItemsSource="{Binding ChannelList}"
                       SelectedItem="{Binding SelectedChannel}"
-                        ScrollViewer.HorizontalScrollBarVisibility="Disabled" Grid.Row="0" Grid.Column="0">
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
                 <ListView.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
