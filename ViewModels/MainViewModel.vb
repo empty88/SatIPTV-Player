@@ -350,7 +350,7 @@ Namespace ViewModels
 
             For Each channel In ChannelList
                 Dim firstEpg = channel.EpgInfos.FirstOrDefault()
-                If firstEpg Is Nothing OrElse firstEpg.StartTime.Equals("0") Then Return False
+                If firstEpg Is Nothing OrElse firstEpg.StartTime.Equals("0") Then Continue For
 
                 Dim difference As Long = firstEpg.StartTime - earliestEpg.StartTime
                 Application.Current.Dispatcher.Invoke(Sub() channel.EpgInfos.Insert(0, New EpgInfoViewModel(difference)))
