@@ -1,11 +1,9 @@
 ﻿Imports System.Collections.ObjectModel
 Imports System.ComponentModel
-Imports System.Configuration
 Imports System.IO
 Imports System.Threading
 Imports System.Windows.Forms
 Imports LibVLCSharp.Shared
-Imports Prism
 Imports Prism.Commands
 Imports SatIPTV.Classes
 Imports SatIPTV.Helper
@@ -169,7 +167,7 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property TimelineElements As List(Of TimelineElement)
+        Public Property TimelineElements As ObservableCollection(Of TimelineElement)
 
         Public Property EditChannelListCommand As DelegateCommand
         Public Property MuteCommand As DelegateCommand
@@ -182,7 +180,7 @@ Namespace ViewModels
         Public Sub New()
             MediaPlayer = New MediaPlayer(_libVLC)
             ChannelList = New ObservableCollection(Of ChannelViewModel)
-            TimelineElements = New List(Of TimelineElement)
+            TimelineElements = New ObservableCollection(Of TimelineElement)
             CurrentVolume = 100
             Mute = False
 
@@ -350,10 +348,20 @@ Namespace ViewModels
 
             For Each channel In ChannelList
                 Dim firstEpg = channel.EpgInfos.FirstOrDefault()
-                If firstEpg Is Nothing OrElse firstEpg.StartTime.Equals("0") Then Continue For
+                Dim lastEpg = channel.EpgInfos.LastOrDefault()
+                Dim differenceStart As Long
+                Dim differenceEnd As Long = 0
+                If firstEpg Is Nothing Then
+                    differenceStart = latestEpg.EndTime - earliestEpg.StartTime
+                Else
+                    differenceStart = firstEpg.StartTime - earliestEpg.StartTime
+                End If
+                If lastEpg IsNot Nothing Then differenceEnd = latestEpg.EndTime - lastEpg.EndTime
 
-                Dim difference As Long = firstEpg.StartTime - earliestEpg.StartTime
-                Application.Current.Dispatcher.Invoke(Sub() channel.EpgInfos.Insert(0, New EpgInfoViewModel(difference)))
+                Application.Current.Dispatcher.Invoke(Sub()
+                                                          If Not differenceStart.Equals(0) Then channel.EpgInfos.Insert(0, New NonEpgInfoViewModel(differenceStart))
+                                                          channel.EpgInfos.Add(New NonEpgInfoViewModel(differenceEnd))
+                                                      End Sub)
             Next
             If earliestEpg Is Nothing Then Return False
             _epgStartTime = earliestEpg.GetLocalStartTime()
@@ -391,7 +399,7 @@ Namespace ViewModels
                                     If My.Settings.UseTvHeadend Then
                                         epgs = NetworkHelper.GetAllEpgFromTvHeadend(chArr(1))
                                         Application.Current.Dispatcher.Invoke(Sub()
-                                                                                  channelVm.EpgInfos.AddRange(epgs.Select(Function(x) New EpgInfoViewModel(x, channelVm)))
+                                                                                  channelVm.EpgInfos.AddRange(epgs?.Select(Function(x) New EpgInfoViewModel(x, channelVm)))
                                                                                   If Not channelVm.EpgInfos.Count.Equals(0) Then channelVm.CurrentProgram = channelVm.EpgInfos.FirstOrDefault().EpgInfo
                                                                               End Sub)
                                     End If

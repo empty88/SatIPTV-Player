@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SatIPTV" xmlns:wpf="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
         xmlns:vm="clr-namespace:SatIPTV.ViewModels"
+        xmlns:vmm="clr-namespace:SatIPTV.ViewModels.Models"
         xmlns:Behaviors="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:fa="http://schemas.fontawesome.io/icons/"
         xmlns:materialIcons="clr-namespace:Material.Icons.WPF;assembly=Material.Icons.WPF"
@@ -58,6 +59,11 @@
                     <Setter Property="MaxWidth" Value="400" />
                 </Style>
             </Style.Resources>
+        </Style>
+        <Style TargetType="{x:Type Border}" x:Key="NonEpgItemStyle">
+            <Style.Setters>
+                <Setter Property="Width" Value="{Binding Width}" />
+            </Style.Setters>
         </Style>
     </Window.Resources>
     <Grid>
@@ -273,20 +279,24 @@
                                 </ItemsControl.ItemsPanel>
                             </ItemsControl>
 
-                            <ScrollViewer x:Name="EpgProgramScrollView" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Grid.Column="1">
+                            <ScrollViewer x:Name="EpgProgramScrollView" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Grid.Column="1"
+                                          PreviewMouseLeftButtonDown="EpgProgramScrollView_PreviewMouseLeftButtonDown"
+                                            PreviewMouseLeftButtonUp="EpgProgramScrollView_PreviewMouseLeftButtonUp"
+                                            PreviewMouseMove="EpgProgramScrollView_PreviewMouseMove">
                                 <Grid>
-                                    <ItemsControl ItemsSource="{Binding ChannelList}" Grid.Column="1" Grid.Row="1">
+                                    <ItemsControl x:Name="ChannelListItemsControl" ItemsSource="{Binding ChannelList}" Grid.Column="1" Grid.Row="1">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="ChannelViewModel" >
-                                                <ItemsControl ItemsSource="{Binding EpgInfos}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate DataType="EpgInfoViewModel" >
+                                                <ItemsControl x:Name="EpgInfosItemsControl" ItemsSource="{Binding EpgInfos}">
+                                                    <ItemsControl.Resources>
+                                                        <DataTemplate DataType="{x:Type vmm:EpgInfoViewModel}" >
                                                             <Border x:Name="EpgItem" BorderThickness="1" BorderBrush="Black"
                                                                 Height="40" Opacity="0.9" Padding="2" Style="{StaticResource EpgItemStyle}"
-                                                                    PreviewMouseLeftButtonDown="EpgItem_PreviewMouseLeftButtonDown"
                                                                     PreviewMouseLeftButtonUp="EpgItem_PreviewMouseLeftButtonUp"
-                                                                    PreviewMouseMove="EpgItem_PreviewMouseMove">
-                                                                <StackPanel Orientation="Vertical">
+                                                                    PreviewMouseLeftButtonDown="EpgItem_PreviewMouseLeftButtonDown"
+                                                                    PreviewMouseMove="EpgItem_PreviewMouseMove"
+                                                                    >
+                                                                <StackPanel Orientation="Vertical" x:Name="EpgItemInfo" HorizontalAlignment="Left" Loaded="EpgItemInfo_Loaded">
                                                                     <TextBlock Text="{Binding Title}" FontSize="14" />
                                                                     <StackPanel Orientation="Horizontal">
                                                                         <TextBlock Text="{Binding TimeSpanString}" FontSize="10" Margin="0,0,10,0" />
@@ -300,7 +310,17 @@
                                                                 </Border.ToolTip>
                                                             </Border>
                                                         </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vmm:NonEpgInfoViewModel}" >
+                                                            <Border x:Name="EpgItem" BorderThickness="1" BorderBrush="Black"
+                                                                Height="40" Opacity="0.9" Padding="2" Style="{StaticResource NonEpgItemStyle}"
+                                                                    PreviewMouseLeftButtonUp="EpgItem_PreviewMouseLeftButtonUp">
+                                                                <StackPanel Orientation="Vertical" x:Name="EpgItemInfo" HorizontalAlignment="Left" Loaded="EpgItemInfo_Loaded">
+                                                                    <TextBlock Text="{Binding Title}" FontSize="14" />
+                                                                    <TextBlock Text="{Binding TimeSpanString}" FontSize="10" Margin="0,0,10,0" />
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.Resources>
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
                                                             <StackPanel Orientation="Horizontal" />
@@ -315,8 +335,8 @@
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                     </ItemsControl>
-                                    <Border x:Name="CurrentTimeBar"  Height="550" Width="2" Background="#44FF0000" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="1" />
-                                    <Border x:Name="MouseTimeBar" Height="550" Width="1" BorderThickness="1,0,1,1" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="1" IsHitTestVisible="False" >
+                                    <Border x:Name="CurrentTimeBar" Width="2" Background="#44FF0000" HorizontalAlignment="Left" VerticalAlignment="Stretch" Grid.Row="1" />
+                                    <Border x:Name="MouseTimeBar" Width="1" BorderThickness="1,0,1,1" HorizontalAlignment="Left" VerticalAlignment="Stretch" Grid.Row="1" IsHitTestVisible="False" >
                                         <Border.BorderBrush>
                                             <DrawingBrush Viewport="0,0,8,8" ViewportUnits="Absolute" TileMode="Tile">
                                                 <DrawingBrush.Drawing>

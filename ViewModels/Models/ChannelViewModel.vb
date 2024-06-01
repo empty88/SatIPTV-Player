@@ -39,14 +39,14 @@ Namespace ViewModels.Models
             End Set
         End Property
 
-        Public Property EpgInfos As ObservableCollection(Of EpgInfoViewModel)
+        Public Property EpgInfos As ObservableCollection(Of Object)
 
         Public Property StreamUrl As String
 
         Public Property ServerIp As IPAddress
 
         Public Sub New()
-            Me.EpgInfos = New ObservableCollection(Of EpgInfoViewModel)
+            Me.EpgInfos = New ObservableCollection(Of Object)
         End Sub
 
         Public Sub New(displayName As String, streamUrl As String)
