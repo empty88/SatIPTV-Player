@@ -16,7 +16,7 @@ Ich habe bisher keine Möglichkeit gefunden das EPG direkt aus dem Stream abzuru
 
 
 ## EPG-Timeline
-![image](https://github.com/empty88/SatIPTV-Player/assets/29315283/3c036572-eb55-40e0-b64f-534871217306)
+![image](https://github.com/empty88/SatIPTV-Player/assets/29315283/5682aec3-8885-4360-a025-099e864cd114)
 
 
 ## Senderliste
