@@ -1,5 +1,6 @@
 ﻿
 Imports System.ComponentModel
+Imports System.Configuration
 Imports System.Drawing
 Imports System.Threading
 Imports System.Windows.Forms
@@ -102,7 +103,11 @@ Namespace Views
         End Sub
 
         Private Sub OverlayGrid_MouseMove(sender As Object, e As Input.MouseEventArgs)
-            Application.Current.Dispatcher.Invoke(Sub() If My.Settings.UseTvHeadend AndAlso Not EpgView.IsVisible Then EpgBorder.Visibility = Visibility.Visible)
+            Application.Current.Dispatcher.Invoke(Sub()
+                                                      If My.Settings.UseTvHeadend AndAlso Not EpgView.IsVisible AndAlso Not String.IsNullOrWhiteSpace(EpgTitle.Content) Then
+                                                          EpgBorder.Visibility = Visibility.Visible
+                                                      End If
+                                                  End Sub)
             _osdTimer.Change(5000, Timeout.Infinite)
         End Sub
 
@@ -155,8 +160,8 @@ Namespace Views
             MainViewModel.ErrorString = Nothing
         End Sub
         Private Sub EpgBorder_MouseEnter(sender As Object, e As Input.MouseEventArgs)
-            If EpgDescriptionBlock.RenderSize.Height + EpgTitle.RenderSize.Height + EpgSubTitle.RenderSize.Height > EpgBorder.RenderSize.Height Then
-                EpgBorder.Height = EpgTitle.RenderSize.Height + EpgSubTitle.RenderSize.Height + EpgDescriptionBlock.RenderSize.Height + 40
+            If EpgDescriptionBlock.RenderSize.Height + EpgHeader.RenderSize.Height + EpgSubTitle.RenderSize.Height > EpgBorder.RenderSize.Height Then
+                EpgBorder.Height = EpgHeader.RenderSize.Height + EpgSubTitle.RenderSize.Height + EpgDescriptionBlock.RenderSize.Height + 40
             End If
         End Sub
 
@@ -188,7 +193,7 @@ Namespace Views
                         If width > EpgProgramScrollView.HorizontalOffset Then
                             If infoItem IsNot Nothing Then
                                 Dim marginLeft As Integer = EpgProgramScrollView.HorizontalOffset - (width - item.ActualWidth)
-                                If item.ActualWidth <= infoItem.MaxWidth + marginLeft + 6 Then
+                                If item.ActualWidth <= infoItem.MaxWidth + marginLeft + 6 AndAlso Not infoItem.MaxWidth.Equals(Double.PositiveInfinity) Then
                                     marginLeft = item.ActualWidth - infoItem.MaxWidth - 6
                                 End If
                                 If marginLeft < 0 Then marginLeft = 0

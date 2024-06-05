@@ -108,15 +108,24 @@
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
                 <ListView.ItemTemplate>
                     <DataTemplate>
-                        <StackPanel Orientation="Horizontal">
-                            <Image Source="{Binding Logo}" Width="50" Visibility="{Binding DataContext.ShowChannelListLogos, RelativeSource={RelativeSource AncestorType={x:Type Grid},AncestorLevel=2,Mode=FindAncestor}, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <StackPanel Orientation="Vertical">
-                                <TextBlock Text="{Binding DisplayName}" FontSize="14" Padding="0" />
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding CurrentProgram.TimeSpanString}" FontSize="11" Padding="0" Margin="0,0,5,0" />
-                                    <TextBlock Text="{Binding CurrentProgram.Title}" FontSize="11" Padding="0" />
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{Binding Logo}" Width="50" Visibility="{Binding DataContext.ShowChannelListLogos, RelativeSource={RelativeSource AncestorType={x:Type Grid},AncestorLevel=2,Mode=FindAncestor}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="{Binding DisplayName}" FontSize="14" Padding="0" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding CurrentProgram.TimeSpanString}" FontSize="11" Padding="0" Margin="0,0,5,0" />
+                                        <TextBlock Text="{Binding CurrentProgram.Title}" FontSize="11" Padding="0" />
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
+                            <ProgressBar Minimum="0"
+                                         Maximum="{Binding CurrentProgramDuration}"
+                                         Value="{Binding CurrentProgramProgress}"
+                                         Width="{Binding Path=ViewportWidth, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ScrollViewer}}"
+                                         Foreground="#66FFAA59"
+                                         Height="2" BorderBrush="#55FFAA59"
+                                         Visibility="{Binding ProgressVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListView.ItemTemplate>
@@ -147,11 +156,20 @@
                     <ColumnDefinition />
                 </Grid.ColumnDefinitions>
 
-                <Border x:Name="EpgBorder" Grid.Row="1" Grid.ColumnSpan="2" Background="#84000000" Height="150" Cursor="Hand" MouseEnter="EpgBorder_MouseEnter" Visibility="{Binding ShowOsd, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border x:Name="EpgBorder" Grid.Row="1" Grid.ColumnSpan="2" Background="#84000000" Height="150" Cursor="Hand" MouseEnter="EpgBorder_MouseEnter" Visibility="Collapsed">
                     <StackPanel Orientation="Vertical" Grid.Row="1" Margin="20,10,20,0">
-                        <StackPanel x:Name="EpgTitle" Orientation="Horizontal">
-                            <Label Content="{Binding SelectedChannel.CurrentProgram.TimeSpanString}" FontSize="17" Foreground="White" Margin="0,0,5,0" Padding="0" />
-                            <Label Content="{Binding SelectedChannel.CurrentProgram.Title}" FontSize="17" FontWeight="Bold" Foreground="White" Padding="0" />
+                        <StackPanel x:Name="EpgHeader" Orientation="Horizontal">
+                            <StackPanel Orientation="Vertical">
+                                <Label Content="{Binding SelectedChannel.CurrentProgram.TimeSpanString}" FontSize="17" Foreground="White" Margin="0" Padding="0" />
+                                <ProgressBar Minimum="0"
+                                             Maximum="{Binding SelectedChannel.CurrentProgramDuration}"
+                                             Value="{Binding SelectedChannel.CurrentProgramProgress}"
+                                             Foreground="#66FFAA59"
+                                             Height="2" BorderBrush="#55FFAA59"
+                                             Visibility="{Binding SelectedChannel.ProgressVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </StackPanel>
+                            
+                            <Label x:Name="EpgTitle" Content="{Binding SelectedChannel.CurrentProgram.Title}" FontSize="17" FontWeight="Bold" Foreground="White" Margin="5,0,0,0" Padding="0" />
                         </StackPanel>
 
                         <Label x:Name="EpgSubTitle" Content="{Binding SelectedChannel.CurrentProgram.SubTitle}" FontSize="14" Foreground="White" Padding="0" />
@@ -316,7 +334,6 @@
                                                                     PreviewMouseLeftButtonUp="EpgItem_PreviewMouseLeftButtonUp">
                                                                 <StackPanel Orientation="Vertical" x:Name="EpgItemInfo" HorizontalAlignment="Left" Loaded="EpgItemInfo_Loaded">
                                                                     <TextBlock Text="{Binding Title}" FontSize="14" />
-                                                                    <TextBlock Text="{Binding TimeSpanString}" FontSize="10" Margin="0,0,10,0" />
                                                                 </StackPanel>
                                                             </Border>
                                                         </DataTemplate>
@@ -361,7 +378,7 @@
                 </Grid>
             </Grid>
         </wpf:VideoView>
-        
+
         <!-- Status bar -->
         <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"  Height="27">
             <Grid.ColumnDefinitions>

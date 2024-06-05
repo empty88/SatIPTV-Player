@@ -15,6 +15,7 @@ Namespace ViewModels.Models
         Private progressUpdateTimer As New Timer(AddressOf ProgressUpdate, Nothing, 1000, 1000)
 
         Private _currentProgramProgress As Integer
+        Private _currentProgramDuration As Integer
         Public Property DisplayName As String
 
         Public Property Logo As BitmapImage
@@ -39,11 +40,27 @@ Namespace ViewModels.Models
             End Set
         End Property
 
+        Public Property CurrentProgramDuration As Integer
+            Get
+                Return _currentProgramDuration
+            End Get
+            Set(value As Integer)
+                _currentProgramDuration = value
+                NotifyPropertyChanged("CurrentProgramDuration")
+            End Set
+        End Property
+
         Public Property EpgInfos As ObservableCollection(Of Object)
 
         Public Property StreamUrl As String
 
         Public Property ServerIp As IPAddress
+
+        Public ReadOnly Property ProgressVisible As Boolean
+            Get
+                Return CurrentProgram IsNot Nothing
+            End Get
+        End Property
 
         Public Sub New()
             Me.EpgInfos = New ObservableCollection(Of Object)
@@ -68,6 +85,13 @@ Namespace ViewModels.Models
         Private Sub ProgressUpdate(state As Object)
             If CurrentProgram Is Nothing Then Exit Sub
             CurrentProgramProgress = CurrentProgram.Progress
+
+            Dim startTime As New DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+            startTime = startTime.AddSeconds(CurrentProgram.StartTime).ToLocalTime()
+
+            Dim endTime As New DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+            endTime = endTime.AddSeconds(CurrentProgram.EndTime).ToLocalTime()
+            CurrentProgramDuration = (endTime - startTime).TotalSeconds
         End Sub
     End Class
 End Namespace

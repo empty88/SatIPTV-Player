@@ -16,7 +16,6 @@ Namespace ViewModels
 
         Private _currentVolume As Integer
         Private _selectedChannel As ChannelViewModel
-        Private _osdTimer As New System.Threading.Timer(AddressOf OsdTimerCallback, Nothing, Timeout.Infinite, Timeout.Infinite)
         Public Shared _epgStartTime As DateTime
         Public Shared _epgEndTime As DateTime
 
@@ -26,7 +25,8 @@ Namespace ViewModels
             Task.Run(Sub()
                          For Each channel In ChannelList
                              If SelectedChannel Is Nothing Then Exit Sub
-                             If My.Settings.UseTvHeadend Then channel.CurrentProgram = NetworkHelper.GetCurrentEpgFromTvHeadend(channel.DisplayName)
+                             Dim epg As EpgInfo = NetworkHelper.GetCurrentEpgFromTvHeadend(channel.DisplayName)
+                             If My.Settings.UseTvHeadend AndAlso epg IsNot Nothing Then channel.CurrentProgram = epg
                          Next
                      End Sub)
         End Sub
@@ -143,17 +143,6 @@ Namespace ViewModels
             Set(value As Boolean)
                 _mute = value
                 NotifyPropertyChanged("Mute")
-            End Set
-        End Property
-
-        Public Property ShowOsd As Boolean
-            Get
-                Return _showOsd
-            End Get
-            Set(value As Boolean)
-                _showOsd = value
-                If value Then _osdTimer.Change(5000, Timeout.Infinite)
-                NotifyPropertyChanged("ShowOsd")
             End Set
         End Property
 
@@ -439,7 +428,6 @@ Namespace ViewModels
 
                                                                                     If My.Settings.UseTvHeadend Then
                                                                                         If SelectedChannel IsNot Nothing Then SelectedChannel.CurrentProgram = epgInfo
-                                                                                        ShowOsd = True
                                                                                     End If
                                                                                 End If
                                                                             End Sub)
@@ -458,23 +446,19 @@ Namespace ViewModels
             AddHandler MediaPlayer.Media.MetaChanged, AddressOf UpdateMeta
             AddHandler MediaPlayer.VolumeChanged, AddressOf UpdateVolume
             AddHandler MediaPlayer.EncounteredError, AddressOf ErrorOccured
+            AddHandler MediaPlayer.Stopped, AddressOf ErrorOccured
             If MediaPlayer.Volume > 100 Then MediaPlayer.Volume = 100
 
             Task.Run(Sub()
                          If SelectedChannel Is Nothing Then Exit Sub
                          If My.Settings.UseTvHeadend Then
                              SelectedChannel.CurrentProgram = NetworkHelper.GetCurrentEpgFromTvHeadend(SelectedChannel.DisplayName)
-                             ShowOsd = True
                          End If
                      End Sub)
         End Sub
 
         Private Sub ErrorOccured(sender As Object, e As EventArgs)
             MainViewModel.ErrorString = "Wiedergabe fehlgeschlagen"
-        End Sub
-
-        Private Sub OsdTimerCallback(state As Object)
-            ShowOsd = False
         End Sub
 
         Public Sub Unload()

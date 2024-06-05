@@ -29,7 +29,7 @@ Public Class EpgInfo
             endTime = endTime.AddSeconds(Me.EndTime).ToLocalTime()
 
 
-            Return (DateTime.UtcNow - startTime).TotalSeconds / (endTime - startTime).TotalSeconds
+            Return (DateTime.Now - startTime).TotalSeconds
         End Get
     End Property
 
