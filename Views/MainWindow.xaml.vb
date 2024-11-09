@@ -7,7 +7,9 @@ Imports System.Windows.Forms
 Imports System.Windows.Input
 Imports LibVLCSharp.Shared
 Imports SatIPTV.Classes
+Imports SatIPTV.Helper
 Imports SatIPTV.ViewModels
+Imports SatIPTV.ViewModels.Models
 
 Namespace Views
     Class MainWindow
@@ -17,6 +19,7 @@ Namespace Views
         Private _vOff As Double = 1
         Private _osdTimer As New System.Threading.Timer(AddressOf OsdTimerCallback, Nothing, Timeout.Infinite, Timeout.Infinite)
         Private _clockTimer As New System.Threading.Timer(AddressOf ClockTimerCallBack, Nothing, 1000, 100)
+        Private _previousWindowState As WindowState
         Private _previousWindowTop As Double
         Private _previousWindowLeft As Double
         Private _previousWindowWidth As Double
@@ -31,7 +34,7 @@ Namespace Views
 
             ' Fügen Sie Initialisierungen nach dem InitializeComponent()-Aufruf hinzu.
 
-            AddHandler EpgView.LayoutUpdated, AddressOf EpgViewScrollToNow
+            AddHandler EpgView.IsVisibleChanged, AddressOf EpgViewScrollToNow
             AddHandler KeyboardListener.KeyDown, AddressOf GlobalKeyDown
         End Sub
 
@@ -40,6 +43,7 @@ Namespace Views
 
             If Me.WindowStyle.Equals(WindowStyle.None) Then
                 ' disable fullscreen
+                Me.WindowState = _previousWindowState
                 Me.Top = _previousWindowTop
                 Me.Left = _previousWindowLeft
                 Me.Width = _previousWindowWidth
@@ -48,6 +52,7 @@ Namespace Views
                 Me.WindowStyle = WindowStyle.ThreeDBorderWindow
             Else
                 ' enable fullscreen
+                _previousWindowState = Me.WindowState
                 _previousWindowTop = Me.Top
                 _previousWindowLeft = Me.Left
                 _previousWindowHeight = Me.Height
@@ -59,6 +64,7 @@ Namespace Views
 
                 Me.WindowStartupLocation = WindowStartupLocation.Manual
                 Me.ResizeMode = ResizeMode.NoResize
+                If Me.WindowState.Equals(WindowState.Maximized) Then Me.WindowState = WindowState.Normal
                 Me.WindowStyle = WindowStyle.None
             End If
         End Sub
@@ -74,6 +80,13 @@ Namespace Views
             Application.Current.Dispatcher.Invoke(Sub()
                                                       Me.CurrentTime.Header = DateTime.Now.ToString("HH:mm:ss")
                                                       CurrentTimeBar.Margin = New Thickness((Date.Now - MainViewModel._epgStartTime).TotalSeconds / 10, 0, 0, 0)
+                                                      If EpgView.IsVisible Then
+                                                          For Each channel In DirectCast(DataContext, MainViewModel).ChannelList
+                                                              For Each epgInfo In channel.EpgInfos
+                                                                  If TypeOf (epgInfo) Is EpgInfoViewModel Then epgInfo.Update()
+                                                              Next
+                                                          Next
+                                                      End If
                                                   End Sub)
         End Sub
 #End Region
@@ -81,6 +94,7 @@ Namespace Views
 #Region "event handler"
 
         Private Sub GlobalKeyDown(Key As Keys)
+            If Not ApplicationHelper.ApplicationIsActivated() Then Return
             If Key.Equals(Keys.F2) Then
                 If EpgView.IsVisible Then
                     EpgView.Visibility = Visibility.Hidden
@@ -95,7 +109,8 @@ Namespace Views
             End If
         End Sub
 
-        Private Sub EpgViewScrollToNow(sender As Object, e As EventArgs)
+        Private Sub EpgViewScrollToNow(sender As Object, e As DependencyPropertyChangedEventArgs)
+            'TODO: EPGView is visible check sufficient?
             If Not _epgScrolledToNow AndAlso Not EpgProgramScrollView.ActualWidth.Equals(0) Then
                 EpgProgramScrollView.ScrollToHorizontalOffset(((Date.Now - MainViewModel._epgStartTime).TotalSeconds / 10) - EpgProgramScrollView.ActualWidth / 2)
                 _epgScrolledToNow = True
@@ -176,34 +191,36 @@ Namespace Views
         End Sub
 
         Private Sub EpgProgramScrollView_ScrollChanged(sender As Object, e As ScrollChangedEventArgs) Handles EpgProgramScrollView.ScrollChanged
-            TimelineScrollView.ScrollToHorizontalOffset(e.HorizontalOffset)
-            EpgDayTitle.Text = MainViewModel._epgStartTime.AddSeconds(e.HorizontalOffset * 10).AddSeconds(EpgProgramScrollView.ActualWidth / 2 * 10).ToString("dddd, dd.MM.yy")
+            If EpgView.Visibility = Visibility.Visible Then
+                TimelineScrollView.ScrollToHorizontalOffset(e.HorizontalOffset)
+                EpgDayTitle.Text = MainViewModel._epgStartTime.AddSeconds(e.HorizontalOffset * 10).AddSeconds(EpgProgramScrollView.ActualWidth / 2 * 10).ToString("dddd, dd.MM.yy")
 
-            Dim channelCOunt As Integer = VisualTreeHelper.GetChildrenCount(VisualTreeHelper.GetChild(VisualTreeHelper.GetChild(VisualTreeHelper.GetChild(ChannelListItemsControl, 0), 0), 0))
+                Dim channelCOunt As Integer = VisualTreeHelper.GetChildrenCount(VisualTreeHelper.GetChild(VisualTreeHelper.GetChild(VisualTreeHelper.GetChild(ChannelListItemsControl, 0), 0), 0))
 
-            Dim epgItemsControls As IEnumerable(Of ItemsControl) = FindVisualChildren(Of ItemsControl)(ChannelListItemsControl, "EpgInfosItemsControl")
-            For Each itemsControl In epgItemsControls
-                Dim children As IEnumerable(Of Border) = FindVisualChildren(Of Border)(itemsControl, "EpgItem")
-                Dim width As Integer = 0
-                For Each item In children
-                    width += item.ActualWidth
-                    Dim infoItem = FindChild(Of StackPanel)(item, "EpgItemInfo")
-                    ' start of epg right outside of ScrollView / inside of Scrollview
-                    If width - item.ActualWidth >= EpgChannelScrollView.HorizontalOffset + EpgProgramScrollView.ActualWidth OrElse width - item.ActualWidth <= EpgChannelScrollView.HorizontalOffset + EpgProgramScrollView.ActualWidth Then
-                        If width > EpgProgramScrollView.HorizontalOffset Then
-                            If infoItem IsNot Nothing Then
-                                Dim marginLeft As Integer = EpgProgramScrollView.HorizontalOffset - (width - item.ActualWidth)
-                                If item.ActualWidth <= infoItem.MaxWidth + marginLeft + 6 AndAlso Not infoItem.MaxWidth.Equals(Double.PositiveInfinity) Then
-                                    marginLeft = item.ActualWidth - infoItem.MaxWidth - 6
+                Dim epgItemsControls As IEnumerable(Of ItemsControl) = FindVisualChildren(Of ItemsControl)(ChannelListItemsControl, "EpgInfosItemsControl")
+                For Each itemsControl In epgItemsControls
+                    Dim children As IEnumerable(Of Border) = FindVisualChildren(Of Border)(itemsControl, "EpgItem")
+                    Dim width As Integer = 0
+                    For Each item In children
+                        width += item.ActualWidth
+                        Dim infoItem = FindChild(Of StackPanel)(item, "EpgItemInfo")
+                        ' start of epg right outside of ScrollView / inside of Scrollview
+                        If width - item.ActualWidth >= EpgChannelScrollView.HorizontalOffset + EpgProgramScrollView.ActualWidth OrElse width - item.ActualWidth <= EpgChannelScrollView.HorizontalOffset + EpgProgramScrollView.ActualWidth Then
+                            If width > EpgProgramScrollView.HorizontalOffset Then
+                                If infoItem IsNot Nothing Then
+                                    Dim marginLeft As Integer = EpgProgramScrollView.HorizontalOffset - (width - item.ActualWidth)
+                                    If item.ActualWidth <= infoItem.MaxWidth + marginLeft + 6 AndAlso Not infoItem.MaxWidth.Equals(Double.PositiveInfinity) Then
+                                        marginLeft = item.ActualWidth - infoItem.MaxWidth - 6
+                                    End If
+                                    If marginLeft < 0 Then marginLeft = 0
+
+                                    infoItem.Margin = New Thickness(marginLeft, 0, 0, 0)
                                 End If
-                                If marginLeft < 0 Then marginLeft = 0
-
-                                infoItem.Margin = New Thickness(marginLeft, 0, 0, 0)
                             End If
                         End If
-                    End If
+                    Next
                 Next
-            Next
+            End If
         End Sub
 
         Private Sub MenuItemEpg_Click(sender As Object, e As RoutedEventArgs)

@@ -90,5 +90,10 @@ Namespace ViewModels.Models
             Dim endtime As New DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
             Return endtime.AddSeconds(Me.EndTime).ToLocalTime()
         End Function
+
+        Public Sub Update()
+            NotifyPropertyChanged("IsLive")
+
+        End Sub
     End Class
 End Namespace

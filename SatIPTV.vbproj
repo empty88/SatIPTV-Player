@@ -155,6 +155,7 @@
     <Compile Include="Classes\EpgInfo.vb" />
     <Compile Include="Classes\StringExtensions.vb" />
     <Compile Include="Classes\TVHeadendEPGResponse.vb" />
+    <Compile Include="Helper\ApplicationHelper.vb" />
     <Compile Include="Helper\EncryptionHelper.vb" />
     <Compile Include="Helper\NetworkHelper.vb" />
     <Compile Include="Classes\SatIpServerDetails.vb" />
