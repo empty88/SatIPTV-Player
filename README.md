@@ -1,6 +1,6 @@
 # SatIPTV-Player
 
-![image](https://github.com/empty88/SatIPTV-Player/assets/29315283/088b2a01-ab95-4431-a0bd-e3d226747962)
+![image](https://github.com/empty88/SatIPTV-Player/assets/29315283/c4e29614-13ad-4afa-9467-3a4a3b9006bf)
 
 
 ## Features
