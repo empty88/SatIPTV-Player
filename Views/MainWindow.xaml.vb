@@ -13,8 +13,8 @@ Imports SatIPTV.ViewModels.Models
 
 Namespace Views
     Class MainWindow
-        Private _scrollMousePoint As Windows.Point
-        Private _scrollChannelMousePoint As Windows.Point
+        Private _scrollMousePoint As System.Windows.Point
+        Private _scrollChannelMousePoint As System.Windows.Point
         Private _hOff As Double = 1
         Private _vOff As Double = 1
         Private _osdTimer As New System.Threading.Timer(AddressOf OsdTimerCallback, Nothing, Timeout.Infinite, Timeout.Infinite)
