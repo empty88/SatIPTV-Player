@@ -9,10 +9,10 @@
 - Finden von SAT>IP-Servern per UPNP im Netzwerk
 - Senderauswahl von Fritz!Box Cable (DVB-C) oder aus [Senderliste] (DVB-S)
 - Kanallogos ([picons])
-- EPG (Tvheadend benötigt, Programm auch ohne EPG nutzbar)
+- EPG (Tvheadend oder per Stream)
 - EPG-Timeline
 
-Ich habe bisher keine Möglichkeit gefunden das EPG direkt aus dem Stream abzurufen. Falls jemand eine Idee hat, wie das funktioniert, bitte gerne melden!
+Ich habe etliche Stunden und Tage damit verbracht, herauszufinden wie das Streamen des EPGs funktioniert und es letztendlich umsetzen können!
 
 
 ## EPG-Timeline
