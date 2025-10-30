@@ -23,8 +23,8 @@ Namespace Classes
         Private Shared _bufferDir As DirectoryInfo
 
         Public Shared Sub GrabUdp(multicastIp As IPAddress, multicastPort As Integer)
-            _bufferDir = New DirectoryInfo(_runGuid.ToString)
-            _bufferDir.Create()
+            '_bufferDir = New DirectoryInfo(_runGuid.ToString)
+            '_bufferDir.Create()
             _cancellationTokenSource = New CancellationTokenSource
             _cancellationToken = _cancellationTokenSource.Token
 
