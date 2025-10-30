@@ -1,7 +1,10 @@
 ﻿Imports System.Collections.ObjectModel
 Imports System.ComponentModel
+Imports System.ComponentModel.DataAnnotations.Schema
 Imports System.IO
 Imports System.Threading
+Imports System.Threading.Channels
+Imports System.Transactions
 Imports System.Windows.Forms
 Imports LibVLCSharp.Shared
 Imports Prism.Commands
@@ -19,19 +22,10 @@ Namespace ViewModels
         Public Shared _epgStartTime As DateTime
         Public Shared _epgEndTime As DateTime
 
-        Private _currentProgramUpdateTimer As New System.Threading.Timer(AddressOf CurrentProgramUpdateTimerCallback, Nothing, 20000, 20000)
+        Private _currentProgramUpdateTimer As New System.Threading.Timer(AddressOf CurrentProgramUpdateTimerCallback, Nothing, 2000, 10000)
+        Private _epgFromEpgGrabberUpdateTimer As New System.Threading.Timer(AddressOf UpdateEpgGrabberEpgInfos, Nothing, 10000, 20000)
 
-        Private Sub CurrentProgramUpdateTimerCallback(state As Object)
-            Task.Run(Sub()
-                         For Each channel In ChannelList
-                             If SelectedChannel Is Nothing Then Exit Sub
-                             Dim epg As EpgInfo = NetworkHelper.GetCurrentEpgFromTvHeadend(channel.DisplayName)
-                             If My.Settings.UseTvHeadend AndAlso epg IsNot Nothing Then channel.CurrentProgram = epg
-                         Next
-                     End Sub)
-        End Sub
-
-        Private _options As String() = {}
+        Private _options As String() = {"--satip-multicast"}
         Private _libVLC As New LibVLC(_options)
         Private _nowPlaying As String
         Private _showChannelListLogos As Boolean
@@ -46,6 +40,10 @@ Namespace ViewModels
         Private _currentTime As String
         Private _channelListWidth As GridLength
         Private _epgReady As Boolean
+        Private _epgVisibility As Visibility = Visibility.Hidden
+        Private _currentProgramUpdateCancellationTokenSource As New CancellationTokenSource()
+
+        Public Property ChannelList As ObservableCollection(Of ChannelViewModel)
 
         Public Shared Property ErrorString As String
             Get
@@ -123,8 +121,6 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property ChannelList As ObservableCollection(Of ChannelViewModel)
-
         Public Property CurrentVolume As Integer
             Get
                 Return _currentVolume
@@ -156,6 +152,16 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property EpgVisibility As Visibility
+            Get
+                Return _epgVisibility
+            End Get
+            Set(value As Visibility)
+                _epgVisibility = value
+
+            End Set
+        End Property
+
         Public Property TimelineElements As ObservableCollection(Of TimelineElement)
 
         Public Property EditChannelListCommand As DelegateCommand
@@ -166,6 +172,64 @@ Namespace ViewModels
         Public Property ImportChannelListCommand As DelegateCommand
         Public Property OpenSettingsCommand As DelegateCommand
 
+
+        Private Sub CurrentProgramUpdateTimerCallback(state As Object)
+            If ChannelList Is Nothing Then Exit Sub
+            Debug.WriteLine("Current Program Update")
+            Task.Run(Sub()
+                         For Each channel In ChannelList
+                             If SelectedChannel Is Nothing OrElse _currentProgramUpdateCancellationTokenSource.Token.IsCancellationRequested Then Exit Sub
+
+                             If My.Settings.UseTvHeadend Then
+                                 Dim epg As EpgInfo = NetworkHelper.GetCurrentEpgFromTvHeadend(channel.DisplayName)
+                                 If epg IsNot Nothing Then channel.CurrentProgram = epg
+                             Else
+                                 Dim epg As EpgInfo = DatabaseHelper.SelectCurrentEpgInfo(channel.DisplayName)
+                                 If epg IsNot Nothing Then channel.CurrentProgram = epg
+                             End If
+                             If _currentProgramUpdateCancellationTokenSource.Token.IsCancellationRequested Then Exit Sub
+                         Next
+                     End Sub, _currentProgramUpdateCancellationTokenSource.Token)
+        End Sub
+
+        Private Sub UpdateEpgGrabberEpgInfos(state As Object)
+            If Not My.Settings.UseTvHeadend Then
+                For Each channel In ChannelList.ToList
+                    Dim epgs As List(Of EpgInfo) = DatabaseHelper.SelectEpgInfos(channel.DisplayName)
+                    If epgs Is Nothing Then Continue For
+                    Dim channelEpgs As List(Of EpgInfoViewModelBase) = channel.EpgInfos.ToList
+                    For Each epg In epgs.ToList
+                        Dim foundEpg As EpgInfoViewModel = channelEpgs.FirstOrDefault(Function(x As EpgInfoViewModelBase)
+                                                                                          If TypeOf x Is EpgInfoViewModel Then
+                                                                                              Return DirectCast(x, EpgInfoViewModel).EventId.Equals(epg.EventId)
+                                                                                          End If
+                                                                                          Return False
+                                                                                      End Function)
+                        If foundEpg Is Nothing Then
+                            Application.Current.Dispatcher.Invoke(Sub()
+                                                                      For i = 0 To channel.EpgInfos.Count - 1
+                                                                          If channel.EpgInfos(i).StartTime > epg.StartTime Then
+                                                                              channel.EpgInfos.Insert(i, New EpgInfoViewModel(epg, channel))
+                                                                              Exit Sub
+                                                                          End If
+                                                                      Next
+                                                                      channel.EpgInfos.Add(New EpgInfoViewModel(epg, channel))
+                                                                  End Sub)
+                        Else
+                            'foundEpg.StartTime = epg.StartTime
+                            'foundEpg.EndTime = epg.EndTime
+                            'foundEpg.Title = epg.Title
+                            'foundEpg.SubTitle = epg.SubTitle
+                            'foundEpg.Description = epg.Description
+                        End If
+                    Next
+                Next
+                CalculateEpg()
+            End If
+            'CalculateEpg()
+        End Sub
+
+
         Public Sub New()
             MediaPlayer = New MediaPlayer(_libVLC)
             ChannelList = New ObservableCollection(Of ChannelViewModel)
@@ -173,11 +237,12 @@ Namespace ViewModels
             CurrentVolume = 100
             Mute = False
 
+            SQLitePCL.raw.SetProvider(New SQLitePCL.SQLite3Provider_e_sqlite3())
+            DatabaseHelper.PurgeOldEpgInfos()
+
             If MediaPlayer.Mute Then MediaPlayer.ToggleMute()
 
-            LoadChannelList().ContinueWith(Sub()
-                                               CalculateEpg()
-                                           End Sub)
+            LoadChannelList()
 
             If Not ChannelList.Count.Equals(0) Then SelectedChannel = ChannelList.First()
 
@@ -198,14 +263,15 @@ Namespace ViewModels
 
         Private Sub OpenSettingsCommandExecute()
             _currentProgramUpdateTimer.Change(Timeout.Infinite, Timeout.Infinite)
-            Dim window As New SettingsView()
-            window.Owner = GetWindow()
-            window.DataContext = New SettingsViewModel()
-            If window.ShowDialog() Then
-                LoadChannelList().ContinueWith(Sub()
-                                                   CalculateEpg()
-                                                   _currentProgramUpdateTimer.Change(20000, 20000)
-                                               End Sub)
+            _currentProgramUpdateCancellationTokenSource.Cancel()
+            Dim Window As New SettingsView()
+            Window.Owner = GetWindow()
+            Window.DataContext = New SettingsViewModel()
+            If Window.ShowDialog() Then
+                _currentProgramUpdateCancellationTokenSource = New CancellationTokenSource()
+                LoadChannelList()
+                _currentProgramUpdateTimer.Change(20000, 20000)
+
             End If
         End Sub
 
@@ -223,7 +289,7 @@ Namespace ViewModels
 
             If (result = True) Then
                 Dim filename As String = Dialog.FileName
-                Dim channelList As New List(Of Channel)
+                Dim channelList As New List(Of Classes.Channel)
 
                 Using fs As New FileStream(filename, FileMode.Open)
                     Using sw As New StreamReader(fs)
@@ -231,13 +297,13 @@ Namespace ViewModels
                             MessageBox.Show("Ungültiges Dateiformat!", "Fehler")
                             Exit Sub
                         End If
-                        Dim channel As Channel = Nothing
+                        Dim channel As Classes.Channel = Nothing
                         While Not sw.EndOfStream
                             Dim line As String = sw.ReadLine()
                             If line.StartsWith("#EXTM3U") Then Continue While
                             If line.StartsWith("#EXTVLCOPT") Then Continue While
                             If line.StartsWith("#EXTINF") Then
-                                channel = New Channel(line.Replace("#EXTINF:0,", String.Empty))
+                                channel = New Classes.Channel(line.Replace("#EXTINF:0,", String.Empty))
                             End If
                             If line.StartsWith("rtsp://") Then
                                 channel.StreamUrl = line
@@ -252,10 +318,7 @@ Namespace ViewModels
                             My.Settings.ChannelList.Add(String.Format("""{0}"",""{1}""", channel.DisplayName, channel.StreamUrl))
                         Next
                         My.Settings.Save()
-                        LoadChannelList().ContinueWith(Sub()
-                                                           CalculateEpg()
-                                                       End Sub)
-
+                        LoadChannelList()
                     End Using
                 End Using
             End If
@@ -294,6 +357,7 @@ Namespace ViewModels
 
         Private Sub EditChannelListCommandExecute()
             _currentProgramUpdateTimer.Change(Timeout.Infinite, Timeout.Infinite)
+            _currentProgramUpdateCancellationTokenSource.Cancel()
             Dim previousSelectedChannelName As String = String.Empty
             If SelectedChannel IsNot Nothing Then previousSelectedChannelName = SelectedChannel.DisplayName
             Dim vm As New EditChannelListViewModel()
@@ -301,19 +365,18 @@ Namespace ViewModels
             window.DataContext = vm
             window.Owner = GetWindow()
             If window.ShowDialog() Then
-                LoadChannelList().ContinueWith(Sub()
-                                                   CalculateEpg()
+                _currentProgramUpdateCancellationTokenSource = New CancellationTokenSource()
+                LoadChannelList()
 
-                                                   Application.Current.Dispatcher.Invoke(Sub()
-                                                                                             Dim newChannel As ChannelViewModel = ChannelList.FirstOrDefault(Function(x) x.DisplayName.Equals(previousSelectedChannelName))
-                                                                                             If Not ChannelList.Count.Equals(0) AndAlso newChannel Is Nothing Then
-                                                                                                 SelectedChannel = ChannelList.First()
-                                                                                             ElseIf newChannel IsNot Nothing Then
-                                                                                                 SelectedChannel = newChannel
-                                                                                             End If
-                                                                                         End Sub)
-                                                   _currentProgramUpdateTimer.Change(20000, 20000)
-                                               End Sub)
+                Application.Current.Dispatcher.Invoke(Sub()
+                                                          Dim newChannel As ChannelViewModel = ChannelList.FirstOrDefault(Function(x) x.DisplayName.Equals(previousSelectedChannelName))
+                                                          If Not ChannelList.Count.Equals(0) AndAlso newChannel Is Nothing Then
+                                                              SelectedChannel = ChannelList.First()
+                                                          ElseIf newChannel IsNot Nothing Then
+                                                              SelectedChannel = newChannel
+                                                          End If
+                                                      End Sub)
+                _currentProgramUpdateTimer.Change(20000, 20000)
             End If
         End Sub
 
@@ -325,21 +388,29 @@ Namespace ViewModels
 #End Region
 
         Public Function CalculateEpg() As Boolean
+            Debug.WriteLine("Calculate EPG, {0} Channels loaded", Me.ChannelList.ToList.Count)
             EpgReady = False
-            Dim earliestEpg As EpgInfoViewModel = Nothing
-            Dim latestEpg As EpgInfoViewModel = Nothing
-            For Each channel In ChannelList
+            Dim earliestEpg As EpgInfoViewModelBase = Nothing
+            Dim latestEpg As EpgInfoViewModelBase = Nothing
+            Dim channelList As List(Of ChannelViewModel) = Me.ChannelList.ToList
+            For Each channel In channelList
+                Application.Current.Dispatcher.Invoke(Sub()
+                                                          If TypeOf channel.EpgInfos.FirstOrDefault() Is NonEpgInfoViewModel Then channel.EpgInfos.Remove(channel.EpgInfos.FirstOrDefault())
+                                                          If TypeOf channel.EpgInfos.LastOrDefault() Is NonEpgInfoViewModel Then channel.EpgInfos.Remove(channel.EpgInfos.LastOrDefault())
+                                                      End Sub)
+
                 Dim firstEpg = channel.EpgInfos.FirstOrDefault()
                 If earliestEpg Is Nothing OrElse (firstEpg IsNot Nothing AndAlso firstEpg.StartTime < earliestEpg.StartTime) Then earliestEpg = firstEpg
                 Dim lastEpg = channel.EpgInfos.LastOrDefault()
                 If latestEpg Is Nothing OrElse (lastEpg IsNot Nothing AndAlso lastEpg.EndTime > latestEpg.EndTime) Then latestEpg = lastEpg
             Next
 
-            For Each channel In ChannelList
+            For Each channel In channelList
                 Dim firstEpg = channel.EpgInfos.FirstOrDefault()
                 Dim lastEpg = channel.EpgInfos.LastOrDefault()
                 Dim differenceStart As Long
                 Dim differenceEnd As Long = 0
+                If latestEpg Is Nothing Then Continue For
                 If firstEpg Is Nothing Then
                     differenceStart = latestEpg.EndTime - earliestEpg.StartTime
                 Else
@@ -349,7 +420,7 @@ Namespace ViewModels
 
                 Application.Current.Dispatcher.Invoke(Sub()
                                                           If Not differenceStart.Equals(0) Then channel.EpgInfos.Insert(0, New NonEpgInfoViewModel(differenceStart))
-                                                          channel.EpgInfos.Add(New NonEpgInfoViewModel(differenceEnd))
+                                                          If Not differenceEnd.Equals(0) Then channel.EpgInfos.Add(New NonEpgInfoViewModel(differenceEnd))
                                                       End Sub)
             Next
             If earliestEpg Is Nothing Then Return False
@@ -367,39 +438,52 @@ Namespace ViewModels
                 Dim elementTime As Date = firstTime
                 For i = 0 To (_epgEndTime - _epgStartTime).TotalMinutes / 30
                     elementTime = elementTime.AddMinutes(30)
-                    Application.Current.Dispatcher.Invoke(Sub() TimelineElements.Add(New TimelineElement(elementTime.ToString("HH:mm"))))
+                    Application.Current.Dispatcher.Invoke(Sub()
+                                                              TimelineElements.Add(New TimelineElement(elementTime.ToString("HH:mm")))
+                                                              Debug.WriteLine("Timeline element added: " & elementTime.ToString("HH:mm"))
+                                                          End Sub)
                 Next
             End If
             EpgReady = True
             Return True
         End Function
 
-        Public Function LoadChannelList() As Task
+        Public Sub LoadChannelList()
             Dim channelVm As ChannelViewModel = Nothing
             Dim epgs As List(Of EpgInfo)
             SelectedChannel = Nothing
             My.Settings.Reload()
             ChannelList.Clear()
-            Return Task.Run(Sub()
-                                For Each channel In My.Settings.ChannelList
-                                    Dim chArr As String() = channel.Split("""")
-                                    Application.Current.Dispatcher.Invoke(Sub() channelVm = New ChannelViewModel(chArr(1), chArr(3)))
+            Task.Run(Sub()
+                         For Each channel In My.Settings.ChannelList
+                             Dim chArr As String() = channel.Split("""")
+                             'TODO: bestehende Einträge aktualiseren
+                             Application.Current.Dispatcher.Invoke(Sub()
+                                                                       channelVm = New ChannelViewModel(chArr(1), chArr(3))
+                                                                       ChannelList.Add(channelVm)
+                                                                   End Sub)
+                         Next
 
-                                    If My.Settings.UseTvHeadend Then
-                                        epgs = NetworkHelper.GetAllEpgFromTvHeadend(chArr(1))
-                                        Application.Current.Dispatcher.Invoke(Sub()
-                                                                                  channelVm.EpgInfos.AddRange(epgs?.Select(Function(x) New EpgInfoViewModel(x, channelVm)))
-                                                                                  If Not channelVm.EpgInfos.Count.Equals(0) Then channelVm.CurrentProgram = channelVm.EpgInfos.FirstOrDefault().EpgInfo
-                                                                              End Sub)
-                                    End If
+                         For Each channelVm In ChannelList
+                             If _currentProgramUpdateCancellationTokenSource.Token.IsCancellationRequested Then Exit Sub
+                             If My.Settings.UseTvHeadend Then
+                                 epgs = NetworkHelper.GetAllEpgFromTvHeadend(channelVm.DisplayName)
+                             Else
+                                 epgs = DatabaseHelper.SelectEpgInfos(channelVm.DisplayName)
+                             End If
+                             'TODO: bestehende Einträge aktualiseren
+                             Application.Current.Dispatcher.Invoke(Sub()
+                                                                       channelVm.EpgInfos.AddRange(epgs?.Select(Function(x) New EpgInfoViewModel(x, channelVm)))
+                                                                       If Not channelVm.EpgInfos.Count.Equals(0) Then channelVm.CurrentProgram = DirectCast(channelVm.EpgInfos.FirstOrDefault(), EpgInfoViewModel).EpgInfo
+                                                                   End Sub)
+                             Debug.WriteLine("EPG for " & channelVm.DisplayName & " loaded")
+                         Next
 
-                                    Application.Current.Dispatcher.Invoke(Sub() ChannelList.Add(channelVm))
-                                    Console.WriteLine(chArr(1) & " geladen")
-                                Next
-
-                                SelectedChannel = ChannelList.FirstOrDefault()
-                            End Sub)
-        End Function
+                         SelectedChannel = ChannelList.FirstOrDefault()
+                     End Sub).ContinueWith(Sub()
+                                               CalculateEpg()
+                                           End Sub)
+        End Sub
 
         Private Sub UpdateVolume(sender As Object, e As MediaPlayerVolumeChangedEventArgs)
             Application.Current.Dispatcher.Invoke(Sub()
@@ -409,6 +493,7 @@ Namespace ViewModels
 
         Private Sub UpdateMeta(sender As Object, e As MediaMetaChangedEventArgs)
             Task.Run(Sub()
+
                          If SelectedChannel Is Nothing Then Exit Sub
                          Dim epgInfo As EpgInfo = Nothing
 
@@ -417,18 +502,19 @@ Namespace ViewModels
                              If nowPl IsNot Nothing AndAlso Not nowPl.Equals(NowPlaying) Then
                                  If My.Settings.UseTvHeadend Then
                                      epgInfo = NetworkHelper.GetCurrentEpgFromTvHeadend(SelectedChannel.DisplayName)
-                                     Console.WriteLine("EPG von TVHeadend abgerufen")
+                                     Debug.WriteLine("Aktuelles EPG von TVHeadend abgerufen")
+                                 Else
+                                     epgInfo = DatabaseHelper.SelectCurrentEpgInfo(SelectedChannel.DisplayName)
+                                     Debug.WriteLine("Aktuelles EPG von Grabber-DB abgerufen")
                                  End If
 
                                  Application.Current.Dispatcher.BeginInvoke(Sub()
                                                                                 If e.MetadataType.Equals(MetadataType.NowPlaying) Then
-                                                                                    Console.WriteLine("Metadaten aktualisiert (NowPlaying)")
+                                                                                    Debug.WriteLine("Metadaten aktualisiert (NowPlaying)")
 
                                                                                     If Not String.IsNullOrWhiteSpace(nowPl) Then NowPlaying = nowPl
 
-                                                                                    If My.Settings.UseTvHeadend Then
-                                                                                        If SelectedChannel IsNot Nothing Then SelectedChannel.CurrentProgram = epgInfo
-                                                                                    End If
+                                                                                    If SelectedChannel IsNot Nothing Then SelectedChannel.CurrentProgram = epgInfo
                                                                                 End If
                                                                             End Sub)
                              End If
@@ -437,13 +523,25 @@ Namespace ViewModels
         End Sub
 
         Private Sub ActivateChannel(streamUrl As String)
-            streamUrl = streamUrl.Replace("rtsp://", "satip://")
             If SelectedChannel.CurrentProgram IsNot Nothing Then NowPlaying = SelectedChannel.CurrentProgram.Title & " "
-            Using media = New Media(_libVLC, New Uri(streamUrl))
-                MediaPlayer.Play(media)
 
+            If MediaPlayer.IsPlaying Then
+                EpgGrabber.Shutdown()
+            Else
+
+            End If
+            Dim streamResult As RtspHelper.StreamResult = RtspHelper.RequestMulticastStream(streamUrl)
+            If streamResult Is Nothing Then
+                MainViewModel.ErrorString = "Wiedergabe fehlgeschlagen"
+                Exit Sub
+            End If
+            Using Media = New Media(_libVLC, New Uri(String.Format("rtp://{0}:{1}/stream={2}", streamResult.ServerIp, streamResult.ServerPort, streamResult.StreamId)))
+                MediaPlayer.Play(Media)
             End Using
-            AddHandler MediaPlayer.Media.MetaChanged, AddressOf UpdateMeta
+            If MediaPlayer.Media IsNot Nothing Then
+                AddHandler MediaPlayer.Media.MetaChanged, AddressOf UpdateMeta
+            End If
+
             AddHandler MediaPlayer.VolumeChanged, AddressOf UpdateVolume
             AddHandler MediaPlayer.EncounteredError, AddressOf ErrorOccured
             AddHandler MediaPlayer.Stopped, AddressOf ErrorOccured
@@ -453,6 +551,8 @@ Namespace ViewModels
                          If SelectedChannel Is Nothing Then Exit Sub
                          If My.Settings.UseTvHeadend Then
                              SelectedChannel.CurrentProgram = NetworkHelper.GetCurrentEpgFromTvHeadend(SelectedChannel.DisplayName)
+                         Else
+                             EpgGrabber.GrabUdp(streamResult.ServerIp, streamResult.ServerPort)
                          End If
                      End Sub)
         End Sub
@@ -462,6 +562,7 @@ Namespace ViewModels
         End Sub
 
         Public Sub Unload()
+            EpgGrabber.Shutdown()
             MediaPlayer.Stop()
             MediaPlayer.Dispose()
             _libVLC.Dispose()

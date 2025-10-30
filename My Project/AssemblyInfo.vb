@@ -1,9 +1,5 @@
-﻿Imports System
-Imports System.Globalization
-Imports System.Reflection
-Imports System.Resources
+﻿Imports System.Reflection
 Imports System.Runtime.InteropServices
-Imports System.Windows
 <Assembly: AssemblyTrademark("")>
 <Assembly: ComVisible(false)>
 

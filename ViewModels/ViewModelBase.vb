@@ -47,6 +47,7 @@ Namespace ViewModels
                 Catch ex As Exception
                 End Try
             Next
+            Return Nothing
         End Function
 
 

@@ -27,6 +27,7 @@ Namespace ViewModels.Models
             Set(value As EpgInfo)
                 _currentProgram = value
                 NotifyPropertyChanged("CurrentProgram")
+                NotifyPropertyChanged("ProgressVisible")
             End Set
         End Property
 
@@ -50,7 +51,7 @@ Namespace ViewModels.Models
             End Set
         End Property
 
-        Public Property EpgInfos As ObservableCollection(Of Object)
+        Public Property EpgInfos As ObservableCollection(Of EpgInfoViewModelBase)
 
         Public Property StreamUrl As String
 
@@ -63,7 +64,7 @@ Namespace ViewModels.Models
         End Property
 
         Public Sub New()
-            Me.EpgInfos = New ObservableCollection(Of Object)
+            Me.EpgInfos = New ObservableCollection(Of EpgInfoViewModelBase)
         End Sub
 
         Public Sub New(displayName As String, streamUrl As String)

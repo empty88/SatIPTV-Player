@@ -3,24 +3,18 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34607.119
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "SatIPTV", "SatIPTV.vbproj", "{18751044-2CA3-46FB-BF66-828AA6B1BE7D}"
+Project("{778DAE3C-4631-46EA-AA77-85C1314464D9}") = "SatIPTV", "SatIPTV.vbproj", "{9D25FE13-7665-4030-865A-E0E586EA02BC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{18751044-2CA3-46FB-BF66-828AA6B1BE7D}.Debug|x64.ActiveCfg = Debug|x64
-		{18751044-2CA3-46FB-BF66-828AA6B1BE7D}.Debug|x64.Build.0 = Debug|x64
-		{18751044-2CA3-46FB-BF66-828AA6B1BE7D}.Debug|x86.ActiveCfg = Debug|x86
-		{18751044-2CA3-46FB-BF66-828AA6B1BE7D}.Debug|x86.Build.0 = Debug|x86
-		{18751044-2CA3-46FB-BF66-828AA6B1BE7D}.Release|x64.ActiveCfg = Release|x64
-		{18751044-2CA3-46FB-BF66-828AA6B1BE7D}.Release|x64.Build.0 = Release|x64
-		{18751044-2CA3-46FB-BF66-828AA6B1BE7D}.Release|x86.ActiveCfg = Release|x86
-		{18751044-2CA3-46FB-BF66-828AA6B1BE7D}.Release|x86.Build.0 = Release|x86
+		{9D25FE13-7665-4030-865A-E0E586EA02BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D25FE13-7665-4030-865A-E0E586EA02BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D25FE13-7665-4030-865A-E0E586EA02BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D25FE13-7665-4030-865A-E0E586EA02BC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

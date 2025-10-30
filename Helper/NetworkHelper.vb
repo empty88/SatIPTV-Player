@@ -5,6 +5,7 @@ Imports SatIPTV.ViewModels
 Imports System.Collections.Concurrent
 Imports System.IO
 Imports System.Net
+Imports System.Net.Http
 Imports System.Net.NetworkInformation
 Imports System.Net.Sockets
 Imports System.Text
@@ -51,15 +52,14 @@ Namespace Helper
 
         Public Shared Function GetSatIpServerDetails(descriptionUrl As String) As SatIpServerDetails
             Try
-                Using webClient As New WebClient() With {.Encoding = Encoding.UTF8}
+                Using webClient As New HttpClient()
                     Dim xmlDoc As New XmlDocument()
-                    xmlDoc.LoadXml(webClient.DownloadString(descriptionUrl))
+                    xmlDoc.LoadXml(webClient.GetStringAsync(descriptionUrl).Result)
 
                     Dim nameSpaceManager As New XmlNamespaceManager(xmlDoc.NameTable)
 
                     nameSpaceManager.AddNamespace("ns", "urn:schemas-upnp-org:device-1-0")
                     nameSpaceManager.AddNamespace("satip", "urn:ses-com:satip")
-
 
                     Dim root As XmlNode = xmlDoc.DocumentElement
                     Dim friendlyName As String = xmlDoc.SelectSingleNode("//ns:friendlyName", nameSpaceManager).InnerText
@@ -68,7 +68,7 @@ Namespace Helper
                     Dim channels As List(Of Channel) = Nothing
 
                     If satIpM3u IsNot Nothing Then
-                        Dim m3uContent As String = webClient.DownloadString(satIpM3u)
+                        Dim m3uContent As String = webClient.GetStringAsync(satIpM3u).Result
                         If m3uContent.StartsWith("#EXTM3U") Then
                             channels = ParseM3u(m3uContent)
                         End If
@@ -79,6 +79,7 @@ Namespace Helper
 
             Catch ex As Exception
                 MainViewModel.ErrorString = String.Format("SatIpServerDetails: {0}", ex.Message)
+                Return Nothing
             End Try
         End Function
 
@@ -108,9 +109,9 @@ Namespace Helper
 
         Public Shared Function GetPublicChannelList(url As String) As List(Of Channel)
             Try
-                Using webClient As New WebClient() With {.Encoding = Encoding.UTF8}
+                Using httpClient As New HttpClient()
 
-                    Dim m3uContent As String = webClient.DownloadString(url)
+                    Dim m3uContent As String = httpClient.GetStringAsync(url).Result
                     If m3uContent.StartsWith("#EXTM3U") Then
                         Return ParseM3u(m3uContent)
                     End If
@@ -128,9 +129,9 @@ Namespace Helper
             Task.Run(Sub()
                          Try
                              Dim url As String = String.Format("{0}/api/epg/events/grid?channel={1}&limit=1", My.Settings.TvHeadendServer, channelName)
-                             Using webClient As New WebClient() With {.Encoding = Encoding.UTF8}
-                                 webClient.Headers.Add(HttpRequestHeader.Authorization, String.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes(String.Format("{0}:{1}", My.Settings.TvHeadendUser, EncryptionHelper.ToInsecureString(EncryptionHelper.DecryptString(My.Settings.TvHeadendPassword)))))))
-                                 Dim json As String = webClient.DownloadString(url)
+                             Using httpClient As New HttpClient()
+                                 httpClient.DefaultRequestHeaders.Authorization = New Headers.AuthenticationHeaderValue("Basic", String.Format("{0}", Convert.ToBase64String(Encoding.UTF8.GetBytes(String.Format("{0}:{1}", My.Settings.TvHeadendUser, EncryptionHelper.ToInsecureString(EncryptionHelper.DecryptString(My.Settings.TvHeadendPassword)))))))
+                                 Dim json As String = httpClient.GetStringAsync(url).Result
                                  Dim response As TVHeadendEPGResponse = JsonConvert.DeserializeObject(json, GetType(TVHeadendEPGResponse))
 
                                  responseItem = response.entries.FirstOrDefault(Function(x) x.ChannelName.Equals(channelName))
@@ -148,9 +149,9 @@ Namespace Helper
             Task.Run(Sub()
                          Try
                              Dim url As String = String.Format("{0}/api/epg/events/grid?channel={1}&limit=99", My.Settings.TvHeadendServer, channelName)
-                             Using webClient As New WebClient() With {.Encoding = Encoding.UTF8}
-                                 webClient.Headers.Add(HttpRequestHeader.Authorization, String.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes(String.Format("{0}:{1}", My.Settings.TvHeadendUser, EncryptionHelper.ToInsecureString(EncryptionHelper.DecryptString(My.Settings.TvHeadendPassword)))))))
-                                 Dim json As String = webClient.DownloadString(url)
+                             Using httpClient As New HttpClient()
+                                 httpClient.DefaultRequestHeaders.Authorization = New Headers.AuthenticationHeaderValue("Basic", String.Format("{0}", Convert.ToBase64String(Encoding.UTF8.GetBytes(String.Format("{0}:{1}", My.Settings.TvHeadendUser, EncryptionHelper.ToInsecureString(EncryptionHelper.DecryptString(My.Settings.TvHeadendPassword)))))))
+                                 Dim json As String = httpClient.GetStringAsync(url).Result
                                  Dim response As TVHeadendEPGResponse = JsonConvert.DeserializeObject(json, GetType(TVHeadendEPGResponse))
 
                                  responseItems = response.entries.Where(Function(x) x.ChannelName.Equals(channelName)).ToList
@@ -174,19 +175,5 @@ Namespace Helper
             Return responseItems
         End Function
 
-        'Public Shared Function DownloadChannelIcon(channelName As String) As Boolean
-        '    Try
-        '        Using webClient As New WebClient() With {.Encoding = Encoding.UTF8}
-        '            Dim xmlDoc As New XmlDocument()
-        '            Dim url As String = String.Format("https://raw.githubusercontent.com/picons/picons/master/build-source/logos/{0}.png", channelName.Replace(" ", "").ToLower())
-        '            webClient.DownloadFile(url, String.Format("{0}.png"))
-
-
-        '            Return True
-        '        End Using
-        '    Catch ex As Exception
-        '        MainViewModel.ErrorString = String.Format("picons download: {0}", ex.Message)
-        '    End Try
-        'End Function
     End Class
 End Namespace

@@ -5,6 +5,8 @@ Imports System.Drawing
 Imports System.Threading
 Imports System.Windows.Forms
 Imports System.Windows.Input
+Imports System.Windows.Media.Animation
+Imports System.Windows.Threading
 Imports LibVLCSharp.Shared
 Imports SatIPTV.Classes
 Imports SatIPTV.Helper
@@ -27,12 +29,26 @@ Namespace Views
         Private _epgScrolledToNow As Boolean
         Private _epgBorderDefaultHeight = 150
 
+        Private _storyboardStatusbarShow As Storyboard
+        Private _storyboardStatusbarHide As Storyboard
+        Private _storyboardMenubarShow As Storyboard
+        Private _storyboardMenubarHide As Storyboard
+        Private _isMouseOverMenubar As Boolean = False
+        Private _isMouseOverStatusbar As Boolean = False
+        Private _statusbarHideTimer As Threading.DispatcherTimer
+        Private _menubarHideTimer As Threading.DispatcherTimer
+
         Public Sub New()
 
             ' Dieser Aufruf ist für den Designer erforderlich.
             InitializeComponent()
 
             ' Fügen Sie Initialisierungen nach dem InitializeComponent()-Aufruf hinzu.
+
+            _statusbarHideTimer = New Threading.DispatcherTimer(TimeSpan.FromSeconds(3), DispatcherPriority.Background, AddressOf StatusbarHideTick, Dispatcher.CurrentDispatcher)
+            _menubarHideTimer = New Threading.DispatcherTimer(TimeSpan.FromSeconds(3), DispatcherPriority.Background, AddressOf MenubarHideTick, Dispatcher.CurrentDispatcher)
+            _statusbarHideTimer.Stop()
+            _menubarHideTimer.Stop()
 
             AddHandler EpgView.IsVisibleChanged, AddressOf EpgViewScrollToNow
             AddHandler KeyboardListener.KeyDown, AddressOf GlobalKeyDown
@@ -50,6 +66,13 @@ Namespace Views
                 Me.Height = _previousWindowHeight
                 Me.ResizeMode = ResizeMode.CanResize
                 Me.WindowStyle = WindowStyle.ThreeDBorderWindow
+
+                _statusbarHideTimer.Stop()
+                _menubarHideTimer.Stop()
+                ShowStatusbar()
+                ShowMenubar()
+                MenuItemBorderless.IsEnabled = True
+                MenuItemBorderless.IsChecked = False
             Else
                 ' enable fullscreen
                 _previousWindowState = Me.WindowState
@@ -66,6 +89,9 @@ Namespace Views
                 Me.ResizeMode = ResizeMode.NoResize
                 If Me.WindowState.Equals(WindowState.Maximized) Then Me.WindowState = WindowState.Normal
                 Me.WindowStyle = WindowStyle.None
+                MenuItemBorderless.IsEnabled = False
+                _statusbarHideTimer.Start()
+                _menubarHideTimer.Start()
             End If
         End Sub
 
@@ -83,7 +109,7 @@ Namespace Views
                                                       If EpgView.IsVisible Then
                                                           For Each channel In DirectCast(DataContext, MainViewModel).ChannelList
                                                               For Each epgInfo In channel.EpgInfos
-                                                                  If TypeOf (epgInfo) Is EpgInfoViewModel Then epgInfo.Update()
+                                                                  If TypeOf (epgInfo) Is EpgInfoViewModel Then DirectCast(epgInfo, EpgInfoViewModel).Update()
                                                               Next
                                                           Next
                                                       End If
@@ -117,14 +143,6 @@ Namespace Views
             End If
         End Sub
 
-        Private Sub OverlayGrid_MouseMove(sender As Object, e As Input.MouseEventArgs)
-            Application.Current.Dispatcher.Invoke(Sub()
-                                                      If My.Settings.UseTvHeadend AndAlso Not EpgView.IsVisible AndAlso Not String.IsNullOrWhiteSpace(EpgTitle.Content) Then
-                                                          EpgBorder.Visibility = Visibility.Visible
-                                                      End If
-                                                  End Sub)
-            _osdTimer.Change(5000, Timeout.Infinite)
-        End Sub
 
         Private Sub MenuItemAlwaysForeground_Checked(sender As Object, e As RoutedEventArgs)
             Me.Topmost = True
@@ -133,14 +151,52 @@ Namespace Views
         Private Sub MenuItemAlwaysForeground_Unchecked(sender As Object, e As RoutedEventArgs)
             Me.Topmost = False
         End Sub
+        Private Sub MenuItemBorderless_Checked(sender As Object, e As RoutedEventArgs)
+            Me.WindowStyle = WindowStyle.None
+            _statusbarHideTimer.Start()
+            _menubarHideTimer.Start()
+        End Sub
+
+        Private Sub MenuItemBorderless_Unchecked(sender As Object, e As RoutedEventArgs)
+            Me.WindowStyle = WindowStyle.ThreeDBorderWindow
+            ShowStatusbar()
+            ShowMenubar()
+        End Sub
+
+        Private Sub MenuItemClose_Click(sender As Object, e As RoutedEventArgs)
+            Me.Close()
+        End Sub
 
         Private Sub VolumeSlider_MouseDoubleClick(sender As Object, e As MouseButtonEventArgs)
             DirectCast(sender, Slider).Value = 100
         End Sub
 
+        Private Sub OverlayGrid_MouseMove(sender As Object, e As Input.MouseEventArgs)
+            If Me.WindowStyle = WindowStyle.None Then
+                If e.GetPosition(Me).Y < 20 AndAlso Menubar.RenderSize.Height.Equals(0) AndAlso Not _isMouseOverMenubar Then
+                    _isMouseOverMenubar = True
+                    ShowMenubar()
+                    ShowStatusbar()
+                ElseIf e.GetPosition(Me).Y > Me.RenderSize.Height - 20 AndAlso StatusBar.RenderSize.Height.Equals(0) AndAlso Not _isMouseOverStatusbar Then
+                    _isMouseOverStatusbar = True
+                    ShowStatusbar()
+                    ShowMenubar()
+                End If
+            End If
+        End Sub
+
         Private Sub OverlayGrid_MouseDown(sender As Object, e As MouseButtonEventArgs)
             If e.ClickCount.Equals(2) Then
                 ToggleFullscreen()
+            ElseIf e.ChangedButton.Equals(MouseButton.Left) AndAlso e.ClickCount.Equals(1) Then
+                Me.DragMove()
+
+                Application.Current.Dispatcher.Invoke(Sub()
+                                                          If Not EpgView.IsVisible AndAlso Not String.IsNullOrWhiteSpace(EpgTitle.Content) Then
+                                                              EpgBorder.Visibility = Visibility.Visible
+                                                          End If
+                                                      End Sub)
+                _osdTimer.Change(5000, Timeout.Infinite)
             End If
         End Sub
 
@@ -187,6 +243,8 @@ Namespace Views
         Private Sub MainWindow_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
             My.Settings.Save()
             _clockTimer.Dispose()
+            _osdTimer.Dispose()
+            RtspHelper.Shutdown()
             DirectCast(Me.DataContext, MainViewModel).Unload()
         End Sub
 
@@ -372,5 +430,80 @@ Namespace Views
         Private Sub EpgItemInfo_Loaded(sender As Object, e As RoutedEventArgs)
             DirectCast(sender, StackPanel).MaxWidth = DirectCast(sender, StackPanel).ActualWidth
         End Sub
+
+#Region "Menu & Statusbar Animation"
+
+        Private Sub AnimateHeight(element As FrameworkElement, from As Double, [to] As Double)
+            Dim animation As New DoubleAnimation(from, [to], New Duration(TimeSpan.FromMilliseconds(250)), FillBehavior.HoldEnd)
+            animation.EasingFunction = New QuadraticEase() With {.EasingMode = EasingMode.EaseInOut}
+
+            element.BeginAnimation(HeightProperty, animation)
+        End Sub
+
+        Private Sub ShowStatusbar()
+            AnimateHeight(StatusBar, 0, 27)
+        End Sub
+
+        Private Sub HideStatusbar()
+            AnimateHeight(StatusBar, 27, 0)
+        End Sub
+
+        Private Sub ShowMenubar()
+            AnimateHeight(Menubar, 0, 22)
+        End Sub
+
+        Private Sub HideMenubar()
+            AnimateHeight(Menubar, 22, 0)
+        End Sub
+
+        Private Sub Menubar_MouseEnter(sender As Object, e As Input.MouseEventArgs)
+            If Me.WindowStyle = WindowStyle.None Then
+                _isMouseOverMenubar = True
+                _isMouseOverStatusbar = True
+                _menubarHideTimer.Stop()
+                _statusbarHideTimer.Stop()
+            End If
+        End Sub
+
+        Private Sub Menubar_MouseLeave(sender As Object, e As Input.MouseEventArgs)
+            If Me.WindowStyle = WindowStyle.None Then
+                _isMouseOverMenubar = False
+                _isMouseOverStatusbar = False
+                _menubarHideTimer.Start()
+                _statusbarHideTimer.Start()
+            End If
+        End Sub
+
+        Private Sub StatusBar_MouseEnter(sender As Object, e As Input.MouseEventArgs)
+            If Me.WindowStyle = WindowStyle.None Then
+                _isMouseOverStatusbar = True
+                _isMouseOverMenubar = True
+                _statusbarHideTimer.Stop()
+                _menubarHideTimer.Stop()
+            End If
+        End Sub
+
+        Private Sub StatusBar_MouseLeave(sender As Object, e As Input.MouseEventArgs)
+            If Me.WindowStyle = WindowStyle.None Then
+                _isMouseOverStatusbar = False
+                _isMouseOverMenubar = False
+                _statusbarHideTimer.Start()
+                _menubarHideTimer.Start()
+            End If
+        End Sub
+
+        Private Sub MenubarHideTick(sender As Object, e As EventArgs)
+            _menubarHideTimer.Stop()
+
+            If Not _isMouseOverMenubar Then HideMenubar()
+        End Sub
+
+        Private Sub StatusbarHideTick(sender As Object, e As EventArgs)
+            _statusbarHideTimer.Stop()
+
+            If Not _isMouseOverStatusbar Then HideStatusbar()
+        End Sub
+
+#End Region
     End Class
 End Namespace

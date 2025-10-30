@@ -12,6 +12,7 @@
         mc:Ignorable="d"
         Title="SAT>IP TV-Player" Height="650" Width="1100"
         MinWidth="350"
+        MinHeight="280"
         x:Name="MainWindow"
         DataContext="{StaticResource MainViewModel}">
     <Window.Resources>
@@ -65,6 +66,7 @@
                 <Setter Property="Width" Value="{Binding Width}" />
             </Style.Setters>
         </Style>
+
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
@@ -78,8 +80,7 @@
             <RowDefinition Height=" Auto" />
         </Grid.RowDefinitions>
 
-
-        <Menu IsMainMenu="True" Grid.ColumnSpan="3" VerticalAlignment="Top">
+        <Menu x:Name="Menubar" IsMainMenu="True" Grid.ColumnSpan="3" Height="22" VerticalAlignment="Top" MouseEnter="Menubar_MouseEnter" MouseLeave="Menubar_MouseLeave">
             <Menu.ItemsPanel>
                 <ItemsPanelTemplate>
                     <DockPanel />
@@ -93,7 +94,8 @@
                 <MenuItem Header="Importieren" Command="{Binding ImportChannelListCommand}" Icon="{materialIcons:MaterialIconExt Kind=Import}" />
             </MenuItem>
             <MenuItem Header="Ansicht" >
-                <MenuItem x:Name="MenuItemEpg" Header="EPG umschalten" Click="MenuItemEpg_Click" InputGestureText="F2" Visibility="{Binding EpgReady, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <MenuItem x:Name="MenuItemEpg" Header="EPG umschalten" Click="MenuItemEpg_Click" InputGestureText="F2"  />
+                <!--Visibility="{Binding EpgReady, Converter={StaticResource BooleanToVisibilityConverter}}"-->
                 <MenuItem x:Name="MenuItemFullscreen" Header="Vollbild" IsCheckable="True" InputGestureText="F12"  Checked="MenuItemFullscreen_Checked" Unchecked="MenuItemFullscreen_Unchecked" />
             </MenuItem>
             <MenuItem x:Name="MenuItemSettings" Header="Einstellungen" Command="{Binding OpenSettingsCommand}"  />
@@ -145,6 +147,8 @@
                 <Grid.ContextMenu>
                     <ContextMenu>
                         <MenuItem x:Name="MenuItemAlwaysForeground" Header="Immer im Vordergrund" IsCheckable="True" Checked="MenuItemAlwaysForeground_Checked" Unchecked="MenuItemAlwaysForeground_Unchecked" />
+                        <MenuItem x:Name="MenuItemBorderless" Header="Rahmenlos" IsCheckable="True" Checked="MenuItemBorderless_Checked" Unchecked="MenuItemBorderless_Unchecked" />
+                        <MenuItem x:Name="MenuItemClose" Header="Beenden" Click="MenuItemClose_Click" />
                     </ContextMenu>
                 </Grid.ContextMenu>
                 <Grid.RowDefinitions>
@@ -168,7 +172,7 @@
                                              Height="2" BorderBrush="#55FFAA59"
                                              Visibility="{Binding SelectedChannel.ProgressVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             </StackPanel>
-                            
+
                             <Label x:Name="EpgTitle" Content="{Binding SelectedChannel.CurrentProgram.Title}" FontSize="17" FontWeight="Bold" Foreground="White" Margin="5,0,0,0" Padding="0" />
                         </StackPanel>
 
@@ -380,17 +384,19 @@
         </wpf:VideoView>
 
         <!-- Status bar -->
-        <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"  Height="27">
+        <Grid x:Name="StatusBar" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Height="27" Background="Transparent" MouseEnter="StatusBar_MouseEnter" MouseLeave="StatusBar_MouseLeave">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="230" />
                 <ColumnDefinition Width="30" />
             </Grid.ColumnDefinitions>
+
             <StackPanel Orientation="Horizontal" Grid.Column="0">
                 <Label Content="{Binding SelectedChannel.DisplayName}" />
                 <TextBlock VerticalAlignment="Center">-</TextBlock>
                 <Label Content="{Binding NowPlaying}" />
             </StackPanel>
+
             <StackPanel Orientation="Horizontal" Grid.Column="1">
                 <Label Content="Lautstärke:"></Label>
                 <Label Content="{Binding CurrentVolume}" Width="30" HorizontalContentAlignment="Right" />
